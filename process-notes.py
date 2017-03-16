@@ -14,42 +14,53 @@ users = {}
 
 def parse_pr_link(text):
     match = PR_LINK_PATTERN.match(text)
-    print('PR matching', text, match is not None and match.groups(1)[0])
     if match:
         return match.groups(1)[0]
     else:
         return None
 
-with open(USERS) as inp:
-    for lin in inp:
-        email, github = [val.strip() for val in lin.split(',')]
-        users[email] = github
 
-to_write = []
-to_write_footer = set()
+def main():
+    with open(USERS) as inp:
+        for lin in inp:
+            email, github = [val.strip() for val in lin.split(',')]
+            users[email] = github
 
-with open(NOTES) as inp:
-    for lin in inp:
-        parts = lin.split()
+    to_write = []
+    to_write_footer = set()
 
-        pr = parse_pr_link(parts[-2])
-        if pr:
-            to_write_footer.add(LINK_DEF_PR.format(pr))
-            del parts[-2]
+    with open(NOTES) as inp:
+        for lin in inp:
+            parts = lin.split()
 
-        email = parts[-1][1:-1]
-
-        if email in users:
-            to_write_footer.add(LINK_DEF_USER.format(users[email]))
+            # We assume it's a PR if second to last part of the commit
+            # matches (#1234)
+            pr = parse_pr_link(parts[-2])
             if pr:
-                parts[-1] = INFO_TEMPLATE.format(users[email], pr)
-            else:
-                parts[-1] = USER_TEMPLATE.format(users[email])
+                to_write_footer.add(LINK_DEF_PR.format(pr))
+                del parts[-2]
 
-        to_write.append(' '.join(parts))
+            email = parts[-1][1:-1]
 
-with open(PROCESSED_NOTES, 'wt') as outp:
-    outp.write('\n'.join(to_write))
-    outp.write('\n\n')
-    outp.write('\n'.join(sorted(to_write_footer)))
-    outp.write('\n')
+            if email not in users:
+                print("Found unknown user {}, "
+                      "please run update-users.py".format(email))
+                return
+
+            if email in users:
+                to_write_footer.add(LINK_DEF_USER.format(users[email]))
+                if pr:
+                    parts[-1] = INFO_TEMPLATE.format(users[email], pr)
+                else:
+                    parts[-1] = USER_TEMPLATE.format(users[email])
+
+            to_write.append(' '.join(parts))
+
+    with open(PROCESSED_NOTES, 'wt') as outp:
+        outp.write('\n'.join(to_write))
+        outp.write('\n\n')
+        outp.write('\n'.join(sorted(to_write_footer)))
+        outp.write('\n')
+
+if __name__ == '__main__':
+    main()

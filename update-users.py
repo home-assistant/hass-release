@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 USERS = 'users.csv'
 NOTES = 'notes.txt'
+GH_NO_EMAIL_SUFFIX = '@users.noreply.github.com'
 users = {}
 
 with open(USERS) as inp:
@@ -26,7 +27,11 @@ require_write = False
 ask_input = True
 
 for email, github in sorted(users.items()):
-    if not github and ask_input:
+    if not github and email.endswith(GH_NO_EMAIL_SUFFIX):
+        github = users[email] = email[:email.index(GH_NO_EMAIL_SUFFIX)]
+        require_write = True
+        print('Auto detected username {} from {}'.format(github, email))
+    elif not github and ask_input:
         try:
             github = users[email] = input(
                 'GitHub username for {}: '.format(email))
