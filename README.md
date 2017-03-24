@@ -2,8 +2,7 @@
 
 Some helper scripts to help create release notes.
 
-```
-./update-notes.sh release-0-40-1
-./update-users.py
-./process-notes.py
-```
+ - Repo needs to be cloned as a sister repo to home-assistant.
+ - Create a token on GitHub and write it to `.token` in repo dir
+ - Right now version is hardcoded in `hassrelease/__main__.py`
+ - Run with `python3 -m hassrelease`
