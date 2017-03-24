@@ -1,3 +1,8 @@
-notes.md
-notes.txt
-users.csv
+.token
+lib
+pip-selfcheck.json
+pyvenv.cfg
+.cache
+data/
+bin
+*.py[cod]
