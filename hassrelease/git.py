@@ -13,9 +13,10 @@ def get_log(branch):
     )
 
     if process.returncode != 0:
-        sys.stderr("Failed getting log")
-        sys.stderr("Is home-assistant a git repo at ../home-assistant?")
-        sys.stderr("Does branch {} exist?".format(branch))
+        sys.stderr.write("Failed getting log\n")
+        sys.stderr.write(
+            "Does home-assistant repo exist at ../home-assistant?\n")
+        sys.stderr.write("Does branch {} exist?\n".format(branch))
         sys.exit(1)
 
     output = process.stdout.decode('utf-8')
