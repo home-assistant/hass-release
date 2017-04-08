@@ -9,7 +9,8 @@ class LogLine:
     PR_PATTERN = re.compile('\(#(\d+)\)')
 
     def __init__(self, line):
-        parts = line.split()
+        # Strip off the '-' at the start
+        parts = line.split()[1:]
 
         self.line = line
         self.email = parts.pop()[1:-1]
