@@ -37,8 +37,6 @@ def generate(release, prs):
         labels = [label.name for label in prs.get(line.pr).labels()]
 
         for label in labels:
-            if label in label_groups:
-                parts.append("({})".format(label))
             for doc_label in DOCS_LABELS:
                 if label.startswith(doc_label):
                     doc = label[len(doc_label):]
@@ -48,6 +46,10 @@ def generate(release, prs):
 
                     parts.append(DOC_TEMPLATE.format(doc))
                     links.add(LINK_DEF_DOC.format(doc))
+
+        for label in labels:
+            if label in label_groups:
+                parts.append("({})".format(label))
 
         msg = ' '.join(parts)
         changes.append(msg)
