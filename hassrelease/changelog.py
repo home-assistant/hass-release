@@ -8,7 +8,7 @@ PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
-LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}'
+LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}/'
 IGNORE_DOCS = set(['discovery'])
 DOCS_LABELS = ['platform: ', 'component: ']
 
