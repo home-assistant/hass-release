@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import sys
 
 from .users import update_users_with_release
 
@@ -25,6 +26,11 @@ def generate(release, prs):
     for line in release.log_lines():
         labels = []
         parts = ['-', line.message]
+
+        if line.email not in users:
+            print('Error! Found unresolved user', line.email)
+            sys.exit(1)
+
         links.add(LINK_DEF_USER.format(users[line.email]))
 
         # Filter out git commits that are not merge commits

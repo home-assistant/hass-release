@@ -15,7 +15,7 @@ def load_users():
     return users
 
 
-def resolve_user(users, email, *, pr=None, prs=None, ask_input=True):
+def resolve_user(users, email, *, pr=None, prs=None, ask_input=True, context=None):
     """Resolves boolean if user added."""
     if email in users:
         return False
@@ -31,6 +31,8 @@ def resolve_user(users, email, *, pr=None, prs=None, ask_input=True):
 
     if github is None:
         if ask_input:
+            if context is not None:
+                print('Context', context)
             github = input('GitHub username for {}: '.format(email))
         else:
             print('Not asking input for {}'.format(email))
@@ -49,7 +51,7 @@ def update_users_with_release(release, prs):
     for line in release.log_lines():
         try:
             if resolve_user(users, line.email, pr=line.pr,
-                            prs=prs, ask_input=ask_input):
+                            prs=prs, ask_input=ask_input, context=line.line):
                 added += 1
         except KeyboardInterrupt:
             ask_input = False
