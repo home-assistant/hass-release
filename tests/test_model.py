@@ -2,7 +2,7 @@ from hassrelease.model import LogLine, Release
 
 
 def test_logline_basic():
-    line = LogLine("Hello world (test@email.com)\n")
+    line = LogLine("- Hello world (test@email.com)\n")
 
     assert line.message == 'Hello world'
     assert line.email == 'test@email.com'
@@ -10,7 +10,7 @@ def test_logline_basic():
 
 
 def test_logline_with_pr():
-    line = LogLine("Hello world (#1234) (test@email.com)\n")
+    line = LogLine("- Hello world (#1234) (test@email.com)\n")
 
     assert line.message == 'Hello world'
     assert line.email == 'test@email.com'

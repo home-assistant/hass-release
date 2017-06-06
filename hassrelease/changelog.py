@@ -10,8 +10,53 @@ DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
 LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}/'
-IGNORE_DOCS = set(['discovery'])
 DOCS_LABELS = ['platform: ', 'component: ']
+
+# Handle special cases. None values will be ignored.
+
+def automation_link(platform):
+    """Return automation doc link."""
+    if platform == 'automation.homeassistant':
+        val = 'home-assistant'
+    elif platform == 'automation.numeric_state':
+        val = 'numeric-state'
+    else:
+        val = platform[len('automation.'):]
+
+    return '/docs/automation/trigger/#{}-trigger'.format(val)
+
+LABEL_MAP = {
+    'discovery': None,
+    'automation.': automation_link
+}
+
+
+def _process_doc_label(label, parts, links):
+    """Process doc labels."""
+    item = None
+
+    for doc_label in DOCS_LABELS:
+        if label.startswith(doc_label):
+            item = doc = label[len(doc_label):]
+            break
+
+    if not item:
+        return
+
+    part = DOC_TEMPLATE.format(item)
+    link = LINK_DEF_DOC.format(item)
+
+    for match, action in LABEL_MAP.items():
+        if item.startswith(match):
+            if action is None:
+                # Ignore item completely
+                return
+            else:
+                link = action(item)
+            break
+
+    parts.append(part)
+    links.add(link)
 
 
 def generate(release, prs):
@@ -43,15 +88,7 @@ def generate(release, prs):
         labels = [label.name for label in prs.get(line.pr).labels()]
 
         for label in labels:
-            for doc_label in DOCS_LABELS:
-                if label.startswith(doc_label):
-                    doc = label[len(doc_label):]
-
-                    if doc in IGNORE_DOCS:
-                        continue
-
-                    parts.append(DOC_TEMPLATE.format(doc))
-                    links.add(LINK_DEF_DOC.format(doc))
+            _process_doc_label(label, parts, links)
 
         for label in labels:
             if label in label_groups:
