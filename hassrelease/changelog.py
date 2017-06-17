@@ -14,6 +14,7 @@ DOCS_LABELS = ['platform: ', 'component: ']
 
 # Handle special cases. None values will be ignored.
 
+
 def automation_link(platform):
     """Return automation doc link."""
     if platform == 'automation.homeassistant':
@@ -24,6 +25,7 @@ def automation_link(platform):
         val = platform[len('automation.'):]
 
     return '/docs/automation/trigger/#{}-trigger'.format(val)
+
 
 LABEL_MAP = {
     'discovery': None,
@@ -37,7 +39,7 @@ def _process_doc_label(label, parts, links):
 
     for doc_label in DOCS_LABELS:
         if label.startswith(doc_label):
-            item = doc = label[len(doc_label):]
+            item = label[len(doc_label):]
             break
 
     if not item:
