@@ -10,7 +10,8 @@ DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
 LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}/'
-DOCS_LABELS = ['platform: ', 'component: ']
+DOCS_LABELS = set(['platform: ', 'component: '])
+IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
     'breaking change': 'Breaking Changes',
@@ -81,16 +82,19 @@ def generate(release, prs):
             print('Error! Found unresolved user', line.email)
             sys.exit(1)
 
-        links.add(LINK_DEF_USER.format(users[line.email]))
-
         # Filter out git commits that are not merge commits
         if line.pr is None:
             continue
 
+        labels = [label.name for label in prs.get(line.pr).labels()]
+
+        # Filter out commits for which the PR has one of the ignored labels
+        if any(label in IGNORE_LINE_LABELS for label in labels):
+            continue
+
+        links.add(LINK_DEF_USER.format(users[line.email]))
         parts.append(INFO_TEMPLATE.format(users[line.email], line.pr))
         links.add(LINK_DEF_PR.format(line.pr))
-
-        labels = [label.name for label in prs.get(line.pr).labels()]
 
         for label in labels:
             _process_doc_label(label, parts, links)
