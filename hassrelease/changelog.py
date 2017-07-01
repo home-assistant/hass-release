@@ -11,7 +11,10 @@ LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
 LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}/'
 DOCS_LABELS = ['platform: ', 'component: ']
-
+LABEL_HEADERS = {
+    'new-platform': 'New Platforms',
+    'breaking change': 'Breaking Changes',
+}
 # Handle special cases. None values will be ignored.
 
 
@@ -106,7 +109,7 @@ def generate(release, prs):
 
     with open(OUTPUT.format(release.branch), 'wt') as outp:
         for label, prs in label_groups.items():
-            outp.write('## {}\n\n'.format(label))
+            outp.write('## {}\n\n'.format(LABEL_HEADERS[label]))
             if prs:
                 outp.write('\n'.join(prs))
             else:
