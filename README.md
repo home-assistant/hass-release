@@ -2,7 +2,6 @@
 
 Some helper scripts to help create release notes.
 
- - Repo needs to be cloned as a sister repo to home-assistant.
+ - Repo needs to have the same parent dir as your checked out Home Assistant repo.
  - Create a token on GitHub and write it to `.token` in repo dir
- - Right now version is hardcoded in `hassrelease/__main__.py`
- - Run with `python3 -m hassrelease`
+ - Run with `python3 -m hassrelease release_notes 0.47`
