@@ -28,7 +28,8 @@ def automation_link(platform):
     else:
         val = platform[len('automation.'):]
 
-    return '/docs/automation/trigger/#{}-trigger'.format(val)
+    return ('[{} docs]: https://home-assistant.io/docs/automation/'
+            'trigger/#{}-trigger'.format(platform, val))
 
 
 LABEL_MAP = {
