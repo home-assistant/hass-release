@@ -28,3 +28,31 @@ def get_log(branch):
             continue
         last = line
         yield line
+
+
+def fetch():
+    process = subprocess.run(
+        "git fetch",
+        shell=True,
+        cwd='../home-assistant'
+    )
+
+    if process.returncode != 0:
+        sys.stderr.write("Updating Home Assistant repo failed\n")
+        sys.stderr.write(
+            "Does home-assistant repo exist at ../home-assistant?\n")
+        sys.exit(1)
+
+
+def cherry_pick(sha):
+    process = subprocess.run(
+        "git cherry-pick {}".format(sha),
+        shell=True,
+        cwd='../home-assistant'
+    )
+
+    if process.returncode != 0:
+        sys.stderr.write("Cherry picking {} failed\n".format(sha))
+        sys.stderr.write(
+            "Does home-assistant repo exist at ../home-assistant?\n")
+        sys.exit(1)

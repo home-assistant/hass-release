@@ -23,3 +23,18 @@ def get_session():
     except GitHubError as exc:
         sys.stderr.write('Invalid token found\n')
         sys.exit(1)
+
+
+def get_milestone_by_title(repo, title):
+    """Fetch milestone by title."""
+    seen = []
+    for ms in repo.milestones(state='open'):
+        if ms.title == title:
+            return ms
+
+        seen.append(ms.title)
+
+    sys.stderr.write(
+        'Milestone {} not found. Open milestones: {}\n'.format(
+            title, ', '.join(seen)))
+    sys.exit(1)
