@@ -1,8 +1,6 @@
 import click
 
-from .github import get_session
-from .model import Release, PRCache
-from . import git, changelog
+from . import git, github, changelog, model
 
 
 @click.group()
@@ -13,19 +11,19 @@ def cli():
 @cli.command()
 @click.argument('release')
 def release_notes(release):
-    github = get_session()
-    repo = github.repository('home-assistant', 'home-assistant')
-    release = Release(release)
-    prs = PRCache(repo)
+    gh_session = github.get_session()
+    repo = gh_session.repository('home-assistant', 'home-assistant')
+    release = model.Release(release)
+    prs = model.PRCache(repo)
     changelog.generate(release, prs)
 
 
 @cli.command()
 @click.argument('title')
 def milestone_cherry_pick(title):
-    github = get_session()
-    repo = github.repository('home-assistant', 'home-assistant')
-    milestone = github.get_milestone_by_title(title)
+    gh_session = github.get_session()
+    repo = gh_session.repository('home-assistant', 'home-assistant')
+    milestone = github.get_milestone_by_title(repo, title)
     git.fetch()
 
     for issue in repo.issues(milestone=milestone.number, state='closed'):
@@ -41,15 +39,15 @@ def milestone_cherry_pick(title):
 @cli.command()
 @click.argument('title')
 def milestone_close(title):
-    github = get_session()
-    repo = github.repository('home-assistant', 'home-assistant')
-    milestone = github.get_milestone_by_title(title)
+    gh_session = github.get_session()
+    repo = gh_session.repository('home-assistant', 'home-assistant')
+    milestone = github.get_milestone_by_title(repo, title)
     git.fetch()
 
     for issue in repo.issues(milestone=milestone.number, state='closed'):
         pull = repo.pull_request(issue.number)
 
         if pull.is_merged():
-            issue.add_label('cherry-picked')
+            issue.add_labels('cherry-picked')
 
     milestone.update(state='closed')
