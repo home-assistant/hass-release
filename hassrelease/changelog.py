@@ -35,7 +35,8 @@ def automation_link(platform):
 LABEL_MAP = {
     'discovery': None,
     'recorder': None,
-    'automation.': automation_link
+    'automation.': automation_link,
+    'emulated_hue.': None
 }
 
 
