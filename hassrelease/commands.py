@@ -26,13 +26,14 @@ def milestone_cherry_pick(title):
     milestone = github.get_milestone_by_title(repo, title)
     git.fetch()
 
-    for issue in repo.issues(milestone=milestone.number, state='closed'):
+    for issue in sorted(
+            repo.issues(milestone=milestone.number, state='closed'),
+            key=lambda issue: issue.number):
         pull = repo.pull_request(issue.number)
 
-        print("Cherry picking {}: {}".format(
-            pull.title, pull.merge_commit_sha))
-
         if pull.is_merged():
+            print("Cherry picking {}: {}".format(
+                pull.title, pull.merge_commit_sha))
             git.cherry_pick(pull.merge_commit_sha)
 
 
