@@ -23,7 +23,10 @@ def resolve_user(users, email, *, pr=None, prs=None, ask_input=True, context=Non
     github = None
 
     if email.endswith(GH_NO_EMAIL_SUFFIX):
+        # Strip off suffix
         github = email[:email.index(GH_NO_EMAIL_SUFFIX)]
+        # Emails are in format <userid>+<username>@suffix. Get username.
+        github = github.split('+', 1)[-1]
 
     elif pr is not None:
         github = prs.get(pr).user.login
