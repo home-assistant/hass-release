@@ -3,13 +3,18 @@ from hassrelease.changelog import automation_link, _process_doc_label
 
 def test_automation_link():
     assert automation_link('automation.mqtt') == \
-        '/docs/automation/trigger/#mqtt-trigger'
+        ('[automation.mqtt docs]: '
+         'https://home-assistant.io/docs/automation/trigger/#mqtt-trigger')
 
     assert automation_link('automation.homeassistant') == \
-        '/docs/automation/trigger/#home-assistant-trigger'
+        ('[automation.homeassistant docs]: '
+         'https://home-assistant.io/docs/automation/trigger/'
+         '#home-assistant-trigger')
 
     assert automation_link('automation.numeric_state') == \
-        '/docs/automation/trigger/#numeric-state-trigger'
+        ('[automation.numeric_state docs]: '
+         'https://home-assistant.io/docs/automation/trigger/'
+         '#numeric-state-trigger')
 
 
 def test_process_doc_label():

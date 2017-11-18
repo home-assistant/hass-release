@@ -4,7 +4,7 @@ import sys
 
 def get_log(branch):
     process = subprocess.run(
-        "git log origin/master...origin/{branch} "
+        "git log master...{branch} "
         "--pretty=format:'- %s (%ae)' --reverse".format(branch=branch),
         shell=True,
         cwd='../home-assistant',

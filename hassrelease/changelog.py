@@ -11,7 +11,7 @@ LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
 LINK_DEF_DOC = '[{0} docs]: https://home-assistant.io/components/{0}/'
 DOCS_LABELS = set(['platform: ', 'component: '])
-IGNORE_LINE_LABELS = set(['reverted', 'cherry-picked'])
+IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
     'breaking change': 'Breaking Changes',
@@ -89,7 +89,13 @@ def generate(release, prs):
         if line.pr is None:
             continue
 
-        labels = [label.name for label in prs.get(line.pr).labels()]
+        pr = prs.get(line.pr)
+
+        if (pr.milestone is not None and
+                pr.milestone.title != release.version_raw):
+            continue
+
+        labels = [label.name for label in pr.labels()]
 
         # Filter out commits for which the PR has one of the ignored labels
         if any(label in IGNORE_LINE_LABELS for label in labels):
