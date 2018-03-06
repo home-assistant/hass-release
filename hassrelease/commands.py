@@ -1,3 +1,5 @@
+import re
+
 import click
 
 from . import git, github, changelog, model
@@ -72,3 +74,33 @@ def milestone_list_commits(repository, title):
             commits.append(pull.merge_commit_sha)
 
     print(' '.join(commits))
+
+
+@cli.command(help='Find unmerged documentation PRs.')
+@click.argument('release')
+def unmerged_docs(release):
+    docs_pr_ptrn = re.compile('home-assistant/home-assistant.github.io#(\d+)')
+    gh_session = github.get_session()
+    repo = gh_session.repository('home-assistant', 'home-assistant')
+    docs_repo = gh_session.repository('home-assistant', 'home-assistant.github.io')
+    release = model.Release(release)
+    prs = model.PRCache(repo)
+    doc_prs = model.PRCache(docs_repo)
+
+    for line in release.log_lines():
+        if line.pr is None:
+            continue
+
+        pr = prs.get(11124) #line.pr)
+        match = docs_pr_ptrn.search(pr.body_text)
+        if not match:
+            continue
+
+        docs_pr = doc_prs.get(match.groups()[0])
+
+        if docs_pr.state == 'closed':
+            continue
+
+        print(pr.title)
+        print(docs_pr.html_url)
+        print()
