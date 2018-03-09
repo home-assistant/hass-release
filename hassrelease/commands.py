@@ -91,7 +91,7 @@ def unmerged_docs(release):
         if line.pr is None:
             continue
 
-        pr = prs.get(11124) #line.pr)
+        pr = prs.get(line.pr)
         match = docs_pr_ptrn.search(pr.body_text)
         if not match:
             continue
