@@ -11,11 +11,12 @@ def cli():
 
 
 @cli.command(help='Generate release notes for Home Assistant.')
+@click.option('--branch', default=None)
 @click.argument('release')
-def release_notes(release):
+def release_notes(branch, release):
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', 'home-assistant')
-    release = model.Release(release)
+    release = model.Release(release, branch=branch)
     prs = model.PRCache(repo)
     changelog.generate(release, prs)
 

@@ -3,7 +3,7 @@ import sys
 
 from .users import update_users_with_release
 
-OUTPUT = 'data/release-{}.md'
+OUTPUT = 'data/{}.md'
 INFO_TEMPLATE = '([@{0}] - [#{1}])'
 PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
@@ -120,7 +120,7 @@ def generate(release, prs):
                 continue
             label_groups[label].append(msg)
 
-    with open(OUTPUT.format(release.branch), 'wt') as outp:
+    with open(OUTPUT.format(release.identifier), 'wt') as outp:
         for label, prs in label_groups.items():
             outp.write('## {}\n\n'.format(LABEL_HEADERS[label]))
             if prs:
