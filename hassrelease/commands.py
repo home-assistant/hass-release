@@ -3,6 +3,7 @@ import re
 import click
 
 from . import git, github, changelog, model
+from .const import LABEL_CHERRY_PICKED
 
 
 @click.group()
@@ -29,15 +30,28 @@ def milestone_cherry_pick(title):
     milestone = github.get_milestone_by_title(repo, title)
     git.fetch()
 
+    to_pick = []
+
     for issue in sorted(
             repo.issues(milestone=milestone.number, state='closed'),
             key=lambda issue: issue.number):
         pull = repo.pull_request(issue.number)
 
-        if pull.is_merged():
-            print("Cherry picking {}: {}".format(
-                pull.title, pull.merge_commit_sha))
-            git.cherry_pick(pull.merge_commit_sha)
+        if not pull.is_merged():
+            print("Not merged yet:", pull.title)
+            continue
+
+        if any(label.name == LABEL_CHERRY_PICKED for label in issue.labels()):
+            print("Already cherry picked:", pull.title)
+            continue
+
+        to_pick.append((pull, issue))
+
+    for pull, issue in to_pick:
+        print("Cherry picking {}: {}".format(
+            pull.title, pull.merge_commit_sha))
+        git.cherry_pick(pull.merge_commit_sha)
+        issue.add_labels(LABEL_CHERRY_PICKED)
 
 
 @cli.command(help='Mark merged PRs as cherry picked and closes milestone.')
@@ -51,7 +65,7 @@ def milestone_close(title):
         pull = repo.pull_request(issue.number)
 
         if pull.is_merged():
-            issue.add_labels('cherry-picked')
+            issue.add_labels(LABEL_CHERRY_PICKED)
 
     milestone.update(state='closed')
 
