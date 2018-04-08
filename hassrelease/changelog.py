@@ -9,7 +9,7 @@ PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
-LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/'
+LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
 DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
@@ -28,8 +28,8 @@ def automation_link(platform):
     else:
         val = platform[len('automation.'):]
 
-    return ('[{} docs]: https:/www.home-assistant.io/docs/automation/'
-            'trigger/#{}-trigger'.format(platform, val))
+    return '[{} docs]: /docs/automation/trigger/#{}-trigger'.format(
+        platform, val)
 
 
 LABEL_MAP = {
