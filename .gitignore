@@ -6,3 +6,5 @@ pyvenv.cfg
 data/
 bin
 *.py[cod]
+lib64
+share/
