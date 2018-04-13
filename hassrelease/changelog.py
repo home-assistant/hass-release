@@ -16,6 +16,7 @@ LABEL_HEADERS = {
     'new-platform': 'New Platforms',
     'new-feature': 'New Features (incomplete)',
     'breaking change': 'Breaking Changes',
+    'cherry-picked': 'Fixes from beta',
 }
 # Handle special cases. None values will be ignored.
 
@@ -76,6 +77,7 @@ def generate(release, prs):
     label_groups['new-platform'] = []
     label_groups['new-feature'] = []
     label_groups['breaking change'] = []
+    label_groups['cherry-picked'] = []
 
     changes = []
     links = set()
@@ -94,7 +96,7 @@ def generate(release, prs):
         pr = prs.get(line.pr)
 
         if (pr.milestone is not None and
-                pr.milestone.title != release.version_raw):
+                pr.milestone.title != release.version):
             continue
 
         labels = [label.name for label in pr.labels()]
@@ -111,7 +113,7 @@ def generate(release, prs):
             _process_doc_label(label, parts, links)
 
         for label in labels:
-            if label in label_groups:
+            if label in label_groups and not 'cherry-picked':
                 parts.append("({})".format(label))
 
         msg = ' '.join(parts)
