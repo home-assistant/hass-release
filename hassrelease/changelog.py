@@ -14,6 +14,7 @@ DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
+    'new-feature': 'New Features (incomplete)',
     'breaking change': 'Breaking Changes',
 }
 # Handle special cases. None values will be ignored.
@@ -73,6 +74,7 @@ def generate(release, prs):
 
     label_groups = OrderedDict()
     label_groups['new-platform'] = []
+    label_groups['new-feature'] = []
     label_groups['breaking change'] = []
 
     changes = []
