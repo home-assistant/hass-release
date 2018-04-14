@@ -14,9 +14,9 @@ DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
-    'new-feature': 'New Features (incomplete)',
+    'new-feature': 'New Features',
     'breaking change': 'Breaking Changes',
-    'cherry-picked': 'Fixes from beta',
+    'cherry-picked': 'Beta Fixes',
 }
 # Handle special cases. None values will be ignored.
 
@@ -113,8 +113,11 @@ def generate(release, prs):
             _process_doc_label(label, parts, links)
 
         for label in labels:
-            if label in label_groups and not 'cherry-picked':
-                parts.append("({})".format(label))
+            if label in label_groups:
+                if label == 'cherry-picked':
+                    parts.append("(beta fix)")
+                else:
+                    parts.append("({})".format(label))
 
         msg = ' '.join(parts)
         changes.append(msg)
