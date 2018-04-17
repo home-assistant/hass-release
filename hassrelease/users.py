@@ -5,12 +5,15 @@ from .const import GH_NO_EMAIL_SUFFIX, USERS_FILE
 def load_users():
     users = {}
 
-    with open(USERS_FILE) as inp:
-        for lin in inp:
-            if ',' not in lin:
-                lin = lin.strip() + ','
-            email, github = [val.strip() for val in lin.split(',')]
-            users[email] = github
+    try:
+        with open(USERS_FILE) as inp:
+            for lin in inp:
+                if ',' not in lin:
+                    lin = lin.strip() + ','
+                email, github = [val.strip() for val in lin.split(',')]
+                users[email] = github
+    except FileNotFoundError:
+        pass
 
     return users
 

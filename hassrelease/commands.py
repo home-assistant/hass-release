@@ -12,7 +12,7 @@ def cli():
 
 
 @cli.command(help='Generate release notes for Home Assistant.')
-@click.option('--branch', default=None)
+@click.option('--branch', default='rc')
 @click.argument('release')
 def release_notes(branch, release):
     gh_session = github.get_session()
@@ -92,13 +92,14 @@ def milestone_list_commits(repository, title):
 
 
 @cli.command(help='Find unmerged documentation PRs.')
+@click.option('--branch', default='rc')
 @click.argument('release')
-def unmerged_docs(release):
+def unmerged_docs(branch, release):
     docs_pr_ptrn = re.compile('home-assistant/home-assistant.github.io#(\d+)')
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', 'home-assistant')
     docs_repo = gh_session.repository('home-assistant', 'home-assistant.github.io')
-    release = model.Release(release)
+    release = model.Release(release, branch=branch)
     prs = model.PRCache(repo)
     doc_prs = model.PRCache(docs_repo)
 
