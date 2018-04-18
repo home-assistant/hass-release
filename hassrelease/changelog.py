@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from distutils.version import StrictVersion
 import sys
 
 from .users import update_users_with_release
@@ -96,7 +97,7 @@ def generate(release, prs):
         pr = prs.get(line.pr)
 
         if (pr.milestone is not None and
-                pr.milestone.title != release.version):
+                StrictVersion(pr.milestone.title) != release.version):
             continue
 
         labels = [label.name for label in pr.labels()]
@@ -129,11 +130,10 @@ def generate(release, prs):
 
     with open(OUTPUT.format(release.identifier), 'wt') as outp:
         for label, prs in label_groups.items():
+            if not prs:
+                continue
             outp.write('## {}\n\n'.format(LABEL_HEADERS[label]))
-            if prs:
-                outp.write('\n'.join(prs))
-            else:
-                outp.write('None')
+            outp.write('\n'.join(prs))
             outp.write('\n\n')
 
         outp.write('## All changes\n\n')
