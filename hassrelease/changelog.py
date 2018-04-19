@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from distutils.version import StrictVersion
 import sys
 
 from .users import update_users_with_release
@@ -14,7 +15,9 @@ DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
+    'new-feature': 'New Features',
     'breaking change': 'Breaking Changes',
+    'cherry-picked': 'Beta Fixes',
 }
 # Handle special cases. None values will be ignored.
 
@@ -73,7 +76,9 @@ def generate(release, prs):
 
     label_groups = OrderedDict()
     label_groups['new-platform'] = []
+    label_groups['new-feature'] = []
     label_groups['breaking change'] = []
+    label_groups['cherry-picked'] = []
 
     changes = []
     links = set()
@@ -92,7 +97,7 @@ def generate(release, prs):
         pr = prs.get(line.pr)
 
         if (pr.milestone is not None and
-                pr.milestone.title != release.version_raw):
+                StrictVersion(pr.milestone.title) != release.version):
             continue
 
         labels = [label.name for label in pr.labels()]
@@ -110,7 +115,10 @@ def generate(release, prs):
 
         for label in labels:
             if label in label_groups:
-                parts.append("({})".format(label))
+                if label == 'cherry-picked':
+                    parts.append("(beta fix)")
+                else:
+                    parts.append("({})".format(label))
 
         msg = ' '.join(parts)
         changes.append(msg)
@@ -122,11 +130,10 @@ def generate(release, prs):
 
     with open(OUTPUT.format(release.identifier), 'wt') as outp:
         for label, prs in label_groups.items():
+            if not prs:
+                continue
             outp.write('## {}\n\n'.format(LABEL_HEADERS[label]))
-            if prs:
-                outp.write('\n'.join(prs))
-            else:
-                outp.write('None')
+            outp.write('\n'.join(prs))
             outp.write('\n\n')
 
         outp.write('## All changes\n\n')
