@@ -1,6 +1,9 @@
 from .commands import cli
 from .monkeypatch import patch
 
-if __name__ == '__main__':
+def main(*args):
     patch()
     cli()
+
+if __name__ == '__main__':
+    main()

@@ -8,3 +8,4 @@ bin
 *.py[cod]
 lib64
 share/
+*.egg-info/
