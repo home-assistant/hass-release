@@ -132,11 +132,12 @@ def generate(release, prs):
         for label, prs in label_groups.items():
             if not prs:
                 continue
-            outp.write('## {}\n\n'.format(LABEL_HEADERS[label]))
+            header = r'{% linkable_title ' + LABEL_HEADERS[label] + r' %}'
+            outp.write('## {}\n\n'.format(header))
             outp.write('\n'.join(prs))
             outp.write('\n\n')
 
-        outp.write('## All changes\n\n')
+        outp.write(r'## {% linkable_title All changes %}' + '\n\n')
         outp.write('\n'.join(changes))
         outp.write('\n\n')
         outp.write('\n'.join(sorted(links)))
