@@ -13,13 +13,14 @@ def cli():
 
 @cli.command(help='Generate release notes for Home Assistant.')
 @click.option('--branch', default='rc')
+@click.option('--website-tags/--no-website-tags', default=True)
 @click.argument('release')
-def release_notes(branch, release):
+def release_notes(branch, website_tags, release):
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', 'home-assistant')
     release = model.Release(release, branch=branch)
     prs = model.PRCache(repo)
-    changelog.generate(release, prs)
+    changelog.generate(release, prs, website_tags=website_tags)
 
 
 @cli.command(help='Cherry pick all merged PRs into the current branch.')

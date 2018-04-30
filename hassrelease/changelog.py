@@ -10,6 +10,7 @@ PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
 LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
+GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/'
 LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
 DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
@@ -21,8 +22,19 @@ LABEL_HEADERS = {
 }
 # Handle special cases. None values will be ignored.
 
+WEBSITE_DIVIDER = """## {% linkable_title If you need help... %}
 
-def automation_link(platform):
+...don't hesitate to use our very active [forums](https://community.home-assistant.io/) or join us for a little [chat](https://discord.gg/c5DvZ4e). The release notes have comments enabled but it's preferred if you use the former communication channels. Thanks.
+
+## {% linkable_title Reporting Issues %}
+
+Experiencing issues introduced by this release? Please report them in our [issue tracker](https://github.com/home-assistant/home-assistant/issues). Make sure to fill in all fields of the issue template.
+
+<!--more-->
+"""
+
+
+def automation_link(platform, website_tags):
     """Return automation doc link."""
     if platform == 'automation.homeassistant':
         val = 'home-assistant'
@@ -31,8 +43,12 @@ def automation_link(platform):
     else:
         val = platform[len('automation.'):]
 
-    return '[{} docs]: /docs/automation/trigger/#{}-trigger'.format(
-        platform, val)
+    if website_tags:
+        format = '[{} docs]: /docs/automation/trigger/#{}-trigger'
+    else:
+        format = '[{} docs]: https://www.home-assistant.io/docs/automation/trigger/#{}-trigger'
+
+    return format.format(platform, val)
 
 
 LABEL_MAP = {
@@ -43,7 +59,7 @@ LABEL_MAP = {
 }
 
 
-def _process_doc_label(label, parts, links):
+def _process_doc_label(label, parts, links, website_tags):
     """Process doc labels."""
     item = None
 
@@ -56,7 +72,10 @@ def _process_doc_label(label, parts, links):
         return
 
     part = DOC_TEMPLATE.format(item)
-    link = LINK_DEF_DOC.format(item)
+    if website_tags:
+        link = LINK_DEF_DOC.format(item)
+    else:
+        link = GITHUB_LINK_DEF_DOC.format(item)
 
     for match, action in LABEL_MAP.items():
         if item.startswith(match):
@@ -64,14 +83,18 @@ def _process_doc_label(label, parts, links):
                 # Ignore item completely
                 return
             else:
-                link = action(item)
+                link = action(item, website_tags)
             break
 
     parts.append(part)
     links.add(link)
 
 
-def generate(release, prs):
+def generate(release, prs, *, website_tags):
+    """Generate a changelog.
+
+    website_tags: boolean if we should include tags for home-assistant.io
+    """
     users = update_users_with_release(release, prs)
 
     label_groups = OrderedDict()
@@ -111,7 +134,7 @@ def generate(release, prs):
         links.add(LINK_DEF_PR.format(line.pr))
 
         for label in labels:
-            _process_doc_label(label, parts, links)
+            _process_doc_label(label, parts, links, website_tags)
 
         for label in labels:
             if label in label_groups:
@@ -130,14 +153,24 @@ def generate(release, prs):
 
     with open(OUTPUT.format(release.identifier), 'wt') as outp:
         for label, prs in label_groups.items():
+            if label == 'breaking change' and website_tags:
+                outp.write(WEBSITE_DIVIDER)
+
             if not prs:
                 continue
-            header = r'{% linkable_title ' + LABEL_HEADERS[label] + r' %}'
-            outp.write('## {}\n\n'.format(header))
+
+            if website_tags:
+                outp.write(f'## {{% linkable_title {LABEL_HEADERS[label]} %}}\n\n')
+            else:
+                outp.write(f'## {LABEL_HEADERS[label]}\n\n')
             outp.write('\n'.join(prs))
             outp.write('\n\n')
 
-        outp.write(r'## {% linkable_title All changes %}' + '\n\n')
+        if website_tags:
+            outp.write('## {% linkable_title All changes %}' + '\n\n')
+        else:
+            outp.write('## All changes\n\n')
+
         outp.write('\n'.join(changes))
         outp.write('\n\n')
         outp.write('\n'.join(sorted(links)))
