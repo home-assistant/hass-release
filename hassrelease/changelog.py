@@ -101,7 +101,9 @@ def generate(release, prs, *, website_tags):
     label_groups['new-platform'] = []
     label_groups['new-feature'] = []
     label_groups['breaking change'] = []
-    label_groups['cherry-picked'] = []
+    if release.version.version[-1] == 0:
+        # Only add 'beta fix' for 0-release
+        label_groups['cherry-picked'] = []
 
     changes = []
     links = set()
