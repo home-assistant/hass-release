@@ -24,10 +24,12 @@ def release_notes(branch, website_tags, release):
 
 
 @cli.command(help='Cherry pick all merged PRs into the current branch.')
+@click.option('--remote-repository', default='home-assistant')
+@click.option('--local-repository', default='../home-assistant')
 @click.argument('title')
-def milestone_cherry_pick(title):
+def milestone_cherry_pick(remote_repository, local_repository, title):
     gh_session = github.get_session()
-    repo = gh_session.repository('home-assistant', 'home-assistant')
+    repo = gh_session.repository('home-assistant', remote_repository)
     milestone = github.get_milestone_by_title(repo, title)
     git.fetch()
 
@@ -51,7 +53,7 @@ def milestone_cherry_pick(title):
     for pull, issue in to_pick:
         print("Cherry picking {}: {}".format(
             pull.title, pull.merge_commit_sha))
-        git.cherry_pick(pull.merge_commit_sha)
+        git.cherry_pick(pull.merge_commit_sha, local_repository)
         issue.add_labels(LABEL_CHERRY_PICKED)
 
 

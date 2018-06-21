@@ -44,11 +44,11 @@ def fetch():
         sys.exit(1)
 
 
-def cherry_pick(sha):
+def cherry_pick(sha, cwd='../home-assistant'):
     process = subprocess.run(
         "git cherry-pick {}".format(sha),
         shell=True,
-        cwd='../home-assistant'
+        cwd=cwd
     )
 
     if process.returncode != 0:
