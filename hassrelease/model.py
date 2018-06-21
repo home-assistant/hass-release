@@ -38,21 +38,20 @@ class PRCache:
 
 
 class Release:
-    def __init__(self, version, *, branch=None):
+    def __init__(self, version, *, branch):
         self.version = StrictVersion(version)
-        self.version_raw = version
+        self.branch = branch
         self._log_lines = None
 
-        if self.version.version[-1] == 0:
-            self.identifier = 'release-{}-{}'.format(*self.version.version[:2])
+        if self.version.version[-1] == 0 and not self.version.prerelease:
+            vstring = '-'.join(map(str, self.version.version[:2]))
         else:
-            self.identifier = 'release-{}-{}-{}'.format(*self.version.version)
+            vstring = '-'.join(map(str, self.version.version))
+        self.identifier = 'release-' + vstring
 
-
-        if branch is not None:
-            self.branch = branch
-        elif self.version.version[-1] == 0:
-            self.branch =  self.identifier
+        if self.version.prerelease:
+            pstring = ''.join(map(str, self.version.prerelease))
+            self.identifier = self.identifier + pstring
 
     def log_lines(self):
         if self._log_lines is None:

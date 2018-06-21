@@ -122,7 +122,8 @@ def generate(release, prs, *, website_tags):
         pr = prs.get(line.pr)
 
         if (pr.milestone is not None and
-                StrictVersion(pr.milestone.title) != release.version):
+            StrictVersion(pr.milestone.title).version !=
+                release.version.version):  # Ignore beta version tag
             continue
 
         labels = [label.name for label in pr.labels()]
