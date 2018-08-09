@@ -53,6 +53,14 @@ class Release:
             pstring = ''.join(map(str, self.version.prerelease))
             self.identifier = self.identifier + pstring
 
+    @property
+    def is_patch_release(self):
+        """Return if this is a patch release or not.
+
+        Patch release is when X in 0.0.X is not 0.
+        """
+        return self.version.version[-1] != 0
+
     def log_lines(self):
         if self._log_lines is None:
             self._log_lines = [LogLine(line) for line in get_log(self.branch)]

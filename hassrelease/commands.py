@@ -1,9 +1,11 @@
+import os
 import re
 
 import click
 
 from . import git, github, changelog, model
 from .const import LABEL_CHERRY_PICKED
+from .util import copy_clipboard
 
 
 @click.group()
@@ -13,14 +15,30 @@ def cli():
 
 @cli.command(help='Generate release notes for Home Assistant.')
 @click.option('--branch', default='rc')
-@click.option('--website-tags/--no-website-tags', default=True)
+@click.option('--force-update/--no-force-update', default=False)
 @click.argument('release')
-def release_notes(branch, website_tags, release):
-    gh_session = github.get_session()
-    repo = gh_session.repository('home-assistant', 'home-assistant')
+def release_notes(branch, force_update, release):
     release = model.Release(release, branch=branch)
-    prs = model.PRCache(repo)
-    changelog.generate(release, prs, website_tags=website_tags)
+    file_website = 'data/{}.md'.format(release.identifier)
+    file_github = 'data/{}-github.md'.format(release.identifier)
+
+    if force_update or not os.path.isfile(file_website):
+        gh_session = github.get_session()
+        repo = gh_session.repository('home-assistant', 'home-assistant')
+        prs = model.PRCache(repo)
+
+        for file, website_tags in (file_website, True), (file_github, False):
+            with open(file, 'wt') as outp:
+                outp.write(changelog.generate(
+                    release, prs, website_tags=website_tags))
+
+    input('Press enter to copy website changelog to clipboard')
+    with open(file_website, 'rt') as file:
+        copy_clipboard(file.read())
+
+    input('Press enter to copy GitHub changelog to clipboard')
+    with open(file_github, 'rt') as file:
+        copy_clipboard(file.read())
 
 
 @cli.command(help='Cherry pick all merged PRs into the current branch.')

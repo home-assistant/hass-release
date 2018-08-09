@@ -4,7 +4,6 @@ import sys
 
 from .users import update_users_with_release
 
-OUTPUT = 'data/{}.md'
 INFO_TEMPLATE = '([@{0}] - [#{1}])'
 PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
@@ -154,27 +153,33 @@ def generate(release, prs, *, website_tags):
                 continue
             label_groups[label].append(msg)
 
-    with open(OUTPUT.format(release.identifier), 'wt') as outp:
+    outp = []
+
+    if not release.is_patch_release:
         for label, prs in label_groups.items():
             if label == 'breaking change' and website_tags:
-                outp.write(WEBSITE_DIVIDER)
+                outp.append(WEBSITE_DIVIDER)
 
             if not prs:
                 continue
 
             if website_tags:
-                outp.write(f'## {{% linkable_title {LABEL_HEADERS[label]} %}}\n\n')
+                outp.append(f'## {{% linkable_title {LABEL_HEADERS[label]} %}}')
+                outp.append('')
             else:
-                outp.write(f'## {LABEL_HEADERS[label]}\n\n')
-            outp.write('\n'.join(prs))
-            outp.write('\n\n')
+                outp.append(f'## {LABEL_HEADERS[label]}')
+                outp.append('')
+            outp.extend(prs)
+            outp.append('')
 
         if website_tags:
-            outp.write('## {% linkable_title All changes %}' + '\n\n')
+            outp.append('## {% linkable_title All changes %}')
+            outp.append('')
         else:
-            outp.write('## All changes\n\n')
+            outp.append('## All changes')
+            outp.append('')
 
-        outp.write('\n'.join(changes))
-        outp.write('\n\n')
-        outp.write('\n'.join(sorted(links)))
-        outp.write('\n')
+    outp.extend(changes)
+    outp.append('')
+    outp.extend(sorted(links))
+    return '\n'.join(outp)
