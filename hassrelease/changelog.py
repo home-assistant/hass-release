@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import datetime
 from distutils.version import StrictVersion
 import sys
 
@@ -155,7 +156,13 @@ def generate(release, prs, *, website_tags):
 
     outp = []
 
-    if not release.is_patch_release:
+    if release.is_patch_release:
+        if website_tags:
+            now = datetime.now()
+            outp.append(f'## {{% linkable_title Release {release.version} - {now.strftime("%B")} {now.day} %}}')
+            outp.append('')
+
+    else:
         for label, prs in label_groups.items():
             if label == 'breaking change' and website_tags:
                 outp.append(WEBSITE_DIVIDER)
