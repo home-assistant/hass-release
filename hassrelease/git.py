@@ -2,6 +2,28 @@ import subprocess
 import sys
 
 
+def get_hass_version(branch):
+    """Get the HA version of a branch."""
+    process = subprocess.run(
+        "git show {branch}:homeassistant/const.py".format(branch=branch),
+        shell=True,
+        cwd='../home-assistant',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
+
+    if process.returncode != 0:
+        sys.stderr.write("Failed getting HASS version of branch\n")
+        sys.stderr.write(
+            "Does home-assistant repo exist at ../home-assistant?\n")
+        sys.stderr.write("Does branch {} exist?\n".format(branch))
+        sys.exit(1)
+
+    locals = {}
+    exec(process.stdout, {}, locals)
+    return locals['__version__']
+
+
 def get_log(branch):
     process = subprocess.run(
         "git log origin/master...{branch} "

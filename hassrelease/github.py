@@ -1,3 +1,4 @@
+from distutils.version import StrictVersion
 import os
 import sys
 
@@ -38,3 +39,20 @@ def get_milestone_by_title(repo, title):
         'Milestone {} not found. Open milestones: {}\n'.format(
             title, ', '.join(seen)))
     sys.exit(1)
+
+
+def get_latest_version_milestone(repo):
+    """Fetch milestone by title."""
+    milestones = []
+
+    for ms in repo.milestones(state='open'):
+        try:
+            milestones.append((StrictVersion(ms.title), ms))
+        except ValueError:
+            print('Found milestone with invalid version', ms.title)
+
+    if not milestones:
+        sys.stderr.write('No milestones found\n')
+        sys.exit(1)
+
+    return list(reversed(sorted(milestones)))[0][1]

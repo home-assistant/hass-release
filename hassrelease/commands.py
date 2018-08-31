@@ -16,11 +16,15 @@ def cli():
 @cli.command(help='Generate release notes for Home Assistant.')
 @click.option('--branch', default='rc')
 @click.option('--force-update/--no-force-update', default=False)
-@click.argument('release')
+@click.option('--release', default=None)
 def release_notes(branch, force_update, release):
-    release = model.Release(release, branch=branch)
-    file_website = 'data/{}.md'.format(release.identifier)
-    file_github = 'data/{}-github.md'.format(release.identifier)
+    if release is None:
+        release = git.get_hass_version(branch)
+        print("Auto detected version", release)
+
+    rel = model.Release(release, branch=branch)
+    file_website = 'data/{}.md'.format(rel.identifier)
+    file_github = 'data/{}-github.md'.format(rel.identifier)
 
     if force_update or not os.path.isfile(file_website):
         gh_session = github.get_session()
@@ -30,7 +34,7 @@ def release_notes(branch, force_update, release):
         for file, website_tags in (file_website, True), (file_github, False):
             with open(file, 'wt') as outp:
                 outp.write(changelog.generate(
-                    release, prs, website_tags=website_tags))
+                    rel, prs, website_tags=website_tags))
 
     input('Press enter to copy website changelog to clipboard')
     with open(file_website, 'rt') as file:
@@ -44,17 +48,24 @@ def release_notes(branch, force_update, release):
 @cli.command(help='Cherry pick all merged PRs into the current branch.')
 @click.option('--remote-repository', default='home-assistant')
 @click.option('--local-repository', default='../home-assistant')
-@click.argument('title')
-def milestone_cherry_pick(remote_repository, local_repository, title):
+@click.option('--milestone', default=None)
+def milestone_cherry_pick(remote_repository, local_repository, milestone):
+    return
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', remote_repository)
-    milestone = github.get_milestone_by_title(repo, title)
+
+    if milestone is None:
+        gh_milestone = github.get_latest_version_milestone(repo)
+        print('No milestone passed in. Found', gh_milestone.title)
+    else:
+        gh_milestone = github.get_milestone_by_title(repo, milestone)
+
     git.fetch()
 
     to_pick = []
 
     for issue in sorted(
-            repo.issues(milestone=milestone.number, state='closed'),
+            repo.issues(milestone=gh_milestone.number, state='closed'),
             key=lambda issue: issue.number):
         pull = repo.pull_request(issue.number)
 
@@ -76,19 +87,18 @@ def milestone_cherry_pick(remote_repository, local_repository, title):
 
 
 @cli.command(help='Mark merged PRs as cherry picked and closes milestone.')
-@click.argument('title')
-def milestone_close(title):
+@click.option('--milestone', default=None)
+def milestone_close(milestone):
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', 'home-assistant')
-    milestone = github.get_milestone_by_title(repo, title)
 
-    for issue in repo.issues(milestone=milestone.number, state='closed'):
-        pull = repo.pull_request(issue.number)
+    if milestone is None:
+        gh_milestone = github.get_latest_version_milestone(repo)
+        print('No milestone passed in. Found', gh_milestone.title)
+    else:
+        gh_milestone = github.get_milestone_by_title(repo, milestone)
 
-        if pull.is_merged():
-            issue.add_labels(LABEL_CHERRY_PICKED)
-
-    milestone.update(state='closed')
+    gh_milestone.update(state='closed')
 
 
 @cli.command(help="List the merge commits of a milestone.")
