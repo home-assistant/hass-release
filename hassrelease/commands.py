@@ -50,7 +50,6 @@ def release_notes(branch, force_update, release):
 @click.option('--local-repository', default='../home-assistant')
 @click.option('--milestone', default=None)
 def milestone_cherry_pick(remote_repository, local_repository, milestone):
-    return
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', remote_repository)
 
