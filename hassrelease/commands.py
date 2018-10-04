@@ -153,6 +153,7 @@ def unmerged_docs(branch, release):
         print()
 
 
-@cli.command(help='Generate credits page.')
+@cli.command(help='Generate credits page'
+                  ' (../home-assistant.io/source/developers/credits.markdown)')
 def credits():
     credits_module.generate_credits()

@@ -138,7 +138,7 @@ function buildContributors(){
   }).on('data', function (data) {
     output += data.toString();
   }).on('end', function(){
-    fs.writeFile('../source/developers/credits.markdown', output, function (writeErr) {
+    fs.writeFile('../../home-assistant.io/source/developers/credits.markdown', output, function (writeErr) {
       if (writeErr) {
         console.log('Error when writing credits.markdown', writeErr);
       } else {
