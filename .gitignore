@@ -9,3 +9,4 @@ bin
 lib64
 share/
 *.egg-info/
+node_modules

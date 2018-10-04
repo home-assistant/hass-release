@@ -4,6 +4,7 @@ import re
 import click
 
 from . import git, github, changelog, model
+from . import credits as credits_module
 from .const import LABEL_CHERRY_PICKED
 from .util import copy_clipboard
 
@@ -150,3 +151,8 @@ def unmerged_docs(branch, release):
         print(pr.title)
         print(docs_pr.html_url)
         print()
+
+
+@cli.command(help='Generate credits page.')
+def credits():
+    credits_module.generate_credits()
