@@ -7,7 +7,7 @@ var fs = require('fs')
 let token;
 
 try {
-  token = fs.readFileSync('.token', 'utf-8').trim();
+  token = fs.readFileSync('../.token', 'utf-8').trim();
 } catch (err) {
   console.error('You must create a .token file that contains a GitHub token.');
   return;
