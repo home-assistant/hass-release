@@ -3,7 +3,7 @@ from threading import Thread
 import requests
 from .const import TOKEN_FILE
 import sys
-
+from queue import Queue
 
 # GitHub API endpoint address
 ENDPOINT = 'https://api.github.com'
@@ -18,13 +18,21 @@ headers = None
 
 
 class ContributorData:
-    def __init__(self, name=None, num_contributions=0):
+    def __init__(self, login=None, name=None, num_contributions=0):
+        self.login = login
         self.name = name
         self.num_contributions = num_contributions
 
 
 def assign_contributor_name(
         contributor_record: ContributorData, contributor_profile_url: str):
+    """
+    Obtains a contributor's name from GitHub and writes it to an existing local
+    contributor record.
+    :param contributor_record: Whose name needs to be known.
+    :param contributor_profile_url: Where to get the name from.
+    :return:
+    """
     user_response = requests.get(url=contributor_profile_url,
                                  headers=headers)
     user = user_response.json()
@@ -32,10 +40,56 @@ def assign_contributor_name(
     contributor_record.name = user['name'] or user['login']
 
 
+def resolve_anon_and_push_to_queue(repo: dict,
+                                   contributor: dict,
+                                   queue: Queue,
+                                   ):
+    """
+    Resolves an anonymous contributor entry to a ContributorData class instance
+    and pushes it to a specified queue by accessing GitHub API.
+    :param contributor: The anonymous contributor that needs to be resolved
+    :param queue: The queue where resolved users need to be put.
+    :param repo: The repo to which the contributor contributed.
+    :return:
+    """
+    # We can find a commit authored by this email's user and
+    # extract his login from it, if it is there.  Otherwise this
+    # email is not linked to any GitHub account.  There's also
+    # an option to find an account by the user name (not login).
+    # But names are not unique.
+
+    # repo['commits_url'] ends with '/commits{/sha}'.  Removing
+    # the last 6.
+    commits_url = repo['commits_url'][:-6]
+    # Remember, we only need one commit.
+    commits_response = requests.get(
+        url=commits_url,
+        params={
+            'author': contributor['email'],
+            'per_page': 1
+        },
+        headers=headers)
+    commit = commits_response.json()[0]
+    # Check whether the email is linked to a GitHub profile.
+    if commit['author'] is not None:
+        contributor_login = commit['author']['login']
+        # We can also get the user's name right from a commit.
+        contributor_name = commit['commit']['author']['name']
+        # Add the resolved user to the queue.
+        print('put to q')
+        queue.put(ContributorData(
+            login=contributor_login,
+            name=contributor_name,
+            num_contributions=contributor['contributions']))
+    # This contributor is not linked to any GitHub account.
+    # else:
+
+
 def process_contributors(repo: dict,
                          contributors_data_dict: dict):
     """
-    Calculates the number of contributions made to the repository by each user
+    Calculates the number of contributions made to the specified repository by
+    each user.
     :param repo: The repository to which contributions were made.
     :param contributors_data_dict: An assumingly empty dictionary to which
     the resulting data needs to be output.  Has the following structure:
@@ -63,9 +117,15 @@ def process_contributors(repo: dict,
     # If there is a lot of contributors to this  repository, we're gonna
     # have to do several requests.  So we need a do-while loop again.
     next_contributors_page = repo['contributors_url'] + '?anon=true'
-    # A dictionary containing threads. Each thread obtains a user's name
-    # (not login) by accessing the API.
-    user_threads = {}
+    # A dictionary containing threads. Each thread obtains a
+    # non-anonymous user's name (not login) by accessing the API.
+    non_anon_user_threads = {}
+    # A dict that holds threads which are responsible for resolving
+    # anonymous entries to ContributorData class instances.
+    anon_user_threads = {}
+    # A queue that hold ContributorData class instances that were given by
+    # GitHub as anonymous contributor entries.
+    anon_queue = Queue()
     while True:
         contributors_response = requests.get(url=next_contributors_page,
                                              params={
@@ -75,12 +135,15 @@ def process_contributors(repo: dict,
         contributors = contributors_response.json()
         for contributor in contributors:
             if contributor['type'] == 'User':
+                print(contributor['login'] + ': ' + str(contributor[
+                    'contributions']))
                 # A non-anonymous contributor entry can only be seen once in
                 # one repository, there's no need to check if the user is
                 # already in the dictionary.
 
                 # Add a new contributor's data structure to the dict.
                 contributor_record = ContributorData(
+                    login=contributor['login'],
                     num_contributions=contributor['contributions'])
                 contributors_data_dict[contributor['login']] = \
                     contributor_record
@@ -93,60 +156,26 @@ def process_contributors(repo: dict,
                                          contributor['url']
                                      )
                                      )
+                """assign_contributor_name(contributor_record, contributor['url'])"""
                 user_thread.start()
-                user_threads[contributor['login']] = user_thread
+                non_anon_user_threads[contributor['login']] = user_thread
             # If the contributor's data is anonymous (we only know his
             # email, name, and the number of contributions he made).
             else:
-                # We can find a commit authored by this email's user and
-                # extract his login from it, if it is there.  Otherwise this
-                # email is not linked to any GitHub account.  There's also
-                # an option to find an account by the user name (not login).
-                # But names are not unique.
-
-                # repo['commits_url'] ends with '/commits{/sha}'.  Removing
-                # the last 6.
-                commits_url = repo['commits_url'][:-6]
-                # Remember, we only need one commit.
-                commits_response = requests.get(
-                    url=commits_url,
-                    params={
-                        'author': contributor['email'],
-                        'per_page': 1
-                    },
-                    headers=headers)
-                commit = commits_response.json()[0]
-                # Check whether the email is linked to a GitHub profile
-                if commit['author'] is not None:
-                    contributor_login = commit['author']['login']
-                    # We can also get the user's name right from a commit.
-                    contributor_name = commit['commit']['author']['name']
-                    # As was said, if the user has committed to the repository
-                    # using several emails, he may have already been meet in
-                    # the list either in form of an anonymous or non-anonymous
-                    # contributor.
-                    #
-                    # Check whether the user's already listed.
-                    contributor_data = contributors_data_dict.get(
-                        contributor_login)
-                    # If he's not
-                    if contributor_data is None:
-                        # Initialize contributor's data structure.
-                        contributor_data = ContributorData(contributor_name)
-                        contributor_data.num_contributions = contributor[
-                            'contributions']
-                        # Associate the contributor's login with it.
-                        contributors_data_dict[
-                            contributor_login] = contributor_data
-                    # We've found an anonymous contributor entry that
-                    # belongs to an already listed non-anonymous contributor.
-                    else:
-                        # Incrementing his contributions counter.
-                        contributors_data_dict[
-                            contributor_login].num_contributions += \
-                            contributor['contributions']
-                # This contributor is not linked to any GitHub account.
-                # else:
+                print(contributor['email'] + ': ' + str(contributor[
+                    'contributions']))
+                # Gonna let another thread get de-anonymize them, and then
+                # put to a queue. We'll get back to them later.
+                anon_user_thread = Thread(
+                    target=resolve_anon_and_push_to_queue,
+                    args=(
+                         repo,
+                         contributor,
+                         anon_queue
+                     ))
+                """resolve_anon_and_push_to_queue(repo, contributor, anon_queue)"""
+                anon_user_thread.start()
+                anon_user_threads[contributor['email']] = anon_user_thread
         # 'None'  will be returned if there is no next page.
         next_contributors_page_dict = contributors_response.links.get('next')
         # Stop if there is no more pages left.
@@ -154,11 +183,23 @@ def process_contributors(repo: dict,
             break
         else:
             next_contributors_page = next_contributors_page_dict['url']
-        print(repo['name'] + ' thread: ' + str(len(user_threads)) +
+        print(repo['name'] + ' thread: ' + str(len(non_anon_user_threads)) +
               'nested threads created')
         print(repo['name'] + ' thread: ' + str(len(contributors_data_dict)) +
-              'contributor entries currently')
-    for user_thread in user_threads.values():
+              ' contributor entries currently')
+    # Initially-anonymous contributors are awaiting in the anon_queue.
+    # And threads assigned to them too.
+    for anon_user_thread in anon_user_threads.values():
+        anon_user_thread.join()
+    print(anon_queue.qsize())
+    # As was said, if the user has committed to the repository
+    # using several emails, he may have already been meet in
+    # the list either in form of an anonymous or non-anonymous
+    # contributor.
+    # Check whether the user's already listed.
+
+
+    for user_thread in non_anon_user_threads.values():
         user_thread.join()
     print('Done processing contributors for' + repo['name'] + 'repository')
 
