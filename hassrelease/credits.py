@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 
 
 # Number of API requests the program is allowed to perform simultaneously.
-NUM_SIMULTANEOUS_API_REQUESTS = 6
+NUM_SIMULTANEOUS_API_REQUESTS = 8
 # A semaphore that controls number of simultaneous API requests.
 api_semaphore = Semaphore(NUM_SIMULTANEOUS_API_REQUESTS)
 # GitHub API endpoint address
@@ -330,7 +330,6 @@ def process_contributors_all(repo: dict,
     process_contributors_one_page(repo, 1, per_page, repo_contributors_dict,
                                   anon_queue,
                                   contributors_first_page_resp.json())
-    print('asdf') #TODO
     for page_thread in page_threads:
         page_thread.join()
     # All the contributors pages for this repository have been processed.
@@ -338,12 +337,12 @@ def process_contributors_all(repo: dict,
     # As was said, if the user has committed to the repository using several
     # emails, he may have already been met in the list of contributors to
     # this repository.
-    try:
-        ex_anon = anon_queue.get()
-        empty = False
-    except Empty:
-        empty = True
-    while not empty:
+    # Do-while the queue is not empty.
+    while True:
+        try:
+            ex_anon = anon_queue.get_nowait()
+        except Empty:
+            break
         # Check whether the user is already listed.
         listed_contributor = repo_contributors_dict.get(ex_anon.login)
         # If the user is in already the dict.
@@ -354,11 +353,6 @@ def process_contributors_all(repo: dict,
         else:
             # Such user hasn't been listed yet. Adding him.
             repo_contributors_dict[ex_anon.login] = ex_anon
-        try:
-            ex_anon = anon_queue.get()
-            empty = False
-        except Empty:
-            empty = True
     print('Done processing contributors "{}".'.format(repo['name']))  #TODO
 
 
