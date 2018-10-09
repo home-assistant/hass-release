@@ -1,5 +1,5 @@
 from .const import GITHUB_ORGANIZATION_NAME
-from threading import Thread
+from threading import Thread, Semaphore
 import requests
 from .const import TOKEN_FILE
 import sys
@@ -7,6 +7,11 @@ from queue import Queue, Empty
 import time
 from urllib.parse import urlparse, parse_qs
 
+
+# Number of API requests the program is allowed to perform simultaneously.
+NUM_SIMULTANEOUS_API_REQUESTS = 6
+# A semaphore that controls number of simultaneous API requests.
+api_semaphore = Semaphore(NUM_SIMULTANEOUS_API_REQUESTS)
 # GitHub API endpoint address
 ENDPOINT = 'https://api.github.com'
 # GitHub API response header keys.
@@ -55,49 +60,54 @@ def request_with_retry(available_since: int,
     :param kwargs: Matches the corresponding parameter of requests.get().
     :return: Matches the return of requests.get() method.
     """
-    # Retry until a response is returned.
-    while True:
-        # In how much seconds the API is going to be available?
-        available_after = available_since - int(time.time())
-        if available_after > 0:
-            print('GitHub API is temporarily unavailable due to rate limit '
-                  'restrictions. Retrying in ' + str(available_after) +
-                  'seconds')  # TODO
-            # Wait for it to become available.
-            time.sleep(available_after)
-        # The API must be available at that point
-        # Performing a request
-        resp = requests.get(url=url, params=params, **kwargs)
-        # If forbidden (may be because of rate-limit timeout.  If so,
-        # we'll wait and then retry).
-        if resp.status_code == 403:
-            # There may be multiple reasons for this.
-            # If it is the rate-limit abuse protection, there will be such
-            # field.
-            retry_after = resp.headers.get(RETRY_AFTER_STR)
-            # If it is the abuse protection.
-            if retry_after is not None:
-                # Setting the 'available_since' according to the server
-                # response.
-                available_since = int(time.time()) + int(retry_after)
-                # Back to waiting.
-            # If it is not the abuse protection.
-            else:
-                # Maybe rate-limit exhaustion?
-                ratelimit_reset = resp.headers.get(RATELIMIT_RESET_STR)
-                # If it is rate-limit exhaustion.
-                if ratelimit_reset is not None:
-                    # Set the 'available_since' it according to the response.
-                    available_since = int(ratelimit_reset)
+    with api_semaphore:  # TODO add semaphore comments
+        # Retry until a response is returned.
+        while True:
+            # In how much seconds the API is going to be available?
+            available_after = available_since - int(time.time())
+            if available_after > 0:
+                print('GitHub API is temporarily unavailable due to rate '
+                      'limit restrictions. Retrying in {}s (at {})'
+                      .format(available_after,
+                              time.asctime(time.gmtime(time.time() +
+                                                       available_after))))
+                # TODO print
+                # Wait for it to become available.
+                time.sleep(available_after)
+            # The API must be available at that point
+            # Performing a request
+            print('Requesting ' + url + ' ' + str(params))  # TODO
+            resp = requests.get(url=url, params=params, **kwargs)
+            # If forbidden (may be because of rate-limit timeout.  If so,
+            # we'll wait and then retry).
+            if resp.status_code == 403:
+                # There may be multiple reasons for this.
+                # If it is the rate-limit abuse protection, there will be such
+                # field.
+                retry_after = resp.headers.get(RETRY_AFTER_STR)
+                # If it is the abuse protection.
+                if retry_after is not None:
+                    # Setting the 'available_since' according to the server
+                    # response.
+                    available_since = int(time.time()) + int(retry_after)
                     # Back to waiting.
-                # If it is something else
+                # If it is not the abuse protection.
                 else:
-                    # This method is not responsible for this
-                    return resp
-        # If some other case. It may be a success, or it may be an another
-        # error. Anyway this method is not responsible for this.
-        else:
-            return resp
+                    # Maybe rate-limit exhaustion?
+                    ratelimit_reset = resp.headers.get(RATELIMIT_RESET_STR)
+                    # If it is rate-limit exhaustion.
+                    if ratelimit_reset is not None:
+                        # Set the 'available_since' according to the response.
+                        available_since = int(ratelimit_reset)
+                        # Back to waiting.
+                    # If it is something else
+                    else:
+                        # This method is not responsible for this
+                        return resp
+            # If some other case. It may be a success, or it may be an another
+            # error. Anyway this method is not responsible for this.
+            else:
+                return resp
 
 
 def assign_contributor_name(
@@ -242,7 +252,10 @@ def process_contributors_one_page(repo: dict,
     for user_thread in non_anon_user_threads:
         user_thread.join()
     print('Done processing contributors page {} repo {}. {} anons were '
-          'enqueued'.format(page_num, repo['name'], anon_queue.qsize())) # TODO
+          'enqueued so far. Non-anons: {}'.format(page_num, repo['name'],
+                                                  anon_queue.qsize(),
+                                                  len(repo_contributors_dict)
+                                                  )) # TODO
 
 
 def process_contributors_all(repo: dict,
@@ -282,9 +295,10 @@ def process_contributors_all(repo: dict,
     per_page = 100
     contributors_first_page_resp = request_with_retry(
             available_since=github_api_available_since,
-            url=repo['contributors_url'] + '?anon=true',
+            url=repo['contributors_url'],
             params={
-                'per_page': per_page
+                'anon': True,
+                'per_page': per_page,
             },
             headers=api_headers)
     # Get the last page number from the headers, if it is there.
@@ -316,6 +330,7 @@ def process_contributors_all(repo: dict,
     process_contributors_one_page(repo, 1, per_page, repo_contributors_dict,
                                   anon_queue,
                                   contributors_first_page_resp.json())
+    print('asdf') #TODO
     for page_thread in page_threads:
         page_thread.join()
     # All the contributors pages for this repository have been processed.
@@ -323,22 +338,27 @@ def process_contributors_all(repo: dict,
     # As was said, if the user has committed to the repository using several
     # emails, he may have already been met in the list of contributors to
     # this repository.
-    # Do-while the queue is not empty.
-    while True:
-        try:
-            ex_anon = anon_queue.get()
-        except Empty:
-            break
+    try:
+        ex_anon = anon_queue.get()
+        empty = False
+    except Empty:
+        empty = True
+    while not empty:
         # Check whether the user is already listed.
         listed_contributor = repo_contributors_dict.get(ex_anon.login)
         # If the user is in already the dict.
         if listed_contributor is not None:
             # This means he used several emails. But the user is the same.
             # Incrementing his contributions counter.
-            listed_contributor.contributions += ex_anon.contributions
+            listed_contributor.num_contributions += ex_anon.num_contributions
         else:
             # Such user hasn't been listed yet. Adding him.
             repo_contributors_dict[ex_anon.login] = ex_anon
+        try:
+            ex_anon = anon_queue.get()
+            empty = False
+        except Empty:
+            empty = True
     print('Done processing contributors "{}".'.format(repo['name']))  #TODO
 
 
