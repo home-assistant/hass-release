@@ -59,7 +59,7 @@ def update_users_with_release(release, prs):
     try:
         users = read_csv_to_dict(USERS_FILE)
     except FileNotFoundError:
-        pass
+        users = {}
 
     added = 0
     ask_input = True
