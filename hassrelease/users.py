@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from .const import GH_NO_EMAIL_SUFFIX, USERS_FILE
+from .github import MyGitHub
+# TODO github3.py objects (pr, prs) and bare dicts (repo) are mixed here.
 
 
 def read_csv_to_dict(filename: str):
@@ -25,33 +27,66 @@ def append_dict_to_csv(data: dict, filename: str):
             file.write('{},{}\n'.format(key, value))
 
 
-def resolve_login(users, email, *, pr=None, prs=None, ask_input=True, context=None):
-    """Resolves boolean if user added."""
-    if email in users:
+def resolve_login(login_by_email: dict, email: str, *, pr=None, prs=None,
+                  ask_input=True, context=None, repo: dict=None,
+                  gh: MyGitHub=None):
+    """
+    Tries to resolve the user's email to user's login, and add the pair to
+    'login_by_email'. Returns True if it has been added. Returns False if it is
+    already there or if it failed to resolve the login.
+    :param login_by_email:
+    :param email:
+    :param pr:
+    :param prs:
+    :param ask_input:
+    :param context:
+    :param repo:
+    :param gh: If repo parameter is given, this parameter must be provided too.
+    :return:
+    """
+
+    if email in login_by_email:
         return False
 
-    github = None
+    login = None
 
     if email.endswith(GH_NO_EMAIL_SUFFIX):
         # Strip off suffix
-        github = email[:email.index(GH_NO_EMAIL_SUFFIX)]
+        userid_and_username = email[:email.index(GH_NO_EMAIL_SUFFIX)]
         # Emails are in format <userid>+<username>@suffix. Get username.
-        github = github.split('+', 1)[-1]
+        login = userid_and_username.split('+', 1)[-1]
 
     elif pr is not None:
-        github = prs.get(pr).user.login
-        print('Found {} for {} from PR #{}'.format(github, email, pr))
+        # Find the user by PR.
+        login = prs.get(pr).user.login
+        print('Found {} for {} from PR #{}'.format(login, email, pr))
 
-    if github is None:
+    elif repo is not None:
+        # Find the user by a commit he made to this repo.
+        # repo['commits_url'] ends with '/commits{/sha}'.  Removing the last 6.
+        commits_url = repo['commits_url'][:-6]
+        commits_response = gh.request_with_retry(
+            url=commits_url,
+            params={
+                'author': email,
+                'per_page': 1
+            })
+        commit = commits_response.json()[0]
+        # Check whether the email is linked to a GitHub profile.
+        if commit['author'] is not None:
+            login = commit['author']['login']
+            # We can also get the user's name right from a commit.
+
+    if login is None:
         if ask_input:
             if context is not None:
                 print('Context', context)
-            github = input('GitHub username for {}: '.format(email))
+            login = input('GitHub username for {}: '.format(email))
         else:
             print('Not asking input for {}'.format(email))
             return False
 
-    users[email] = github
+    login_by_email[email] = login
     return True
 
 
