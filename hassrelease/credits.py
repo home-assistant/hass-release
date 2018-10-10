@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 
 
 # Number of API requests the program is allowed to perform simultaneously.
-NUM_SIMULTANEOUS_API_REQUESTS = 8
+NUM_SIMULTANEOUS_API_REQUESTS = 100
 # A semaphore that controls number of simultaneous API requests.
 api_semaphore = Semaphore(NUM_SIMULTANEOUS_API_REQUESTS)
 # GitHub API endpoint address
@@ -25,7 +25,6 @@ RETRY_AFTER_STR = 'Retry-After'
 api_headers = {
     'Accept': 'application/vnd.github.v3+json'
 }
-
 # The time when the GitHub API is going to be available.
 github_api_available_since = 0
 
@@ -60,10 +59,9 @@ def request_with_retry(available_since: int,
     :param kwargs: Matches the corresponding parameter of requests.get().
     :return: Matches the return of requests.get() method.
     """
-    with api_semaphore:  # TODO add semaphore comments
+    with api_semaphore:
         # Retry until a response is returned.
         while True:
-            # In how much seconds the API is going to be available?
             available_after = available_since - int(time.time())
             if available_after > 0:
                 print('GitHub API is temporarily unavailable due to rate '
@@ -72,11 +70,8 @@ def request_with_retry(available_since: int,
                               time.asctime(time.gmtime(time.time() +
                                                        available_after))))
                 # TODO print
-                # Wait for it to become available.
                 time.sleep(available_after)
             # The API must be available at that point
-            # Performing a request
-            print('Requesting ' + url + ' ' + str(params))  # TODO
             resp = requests.get(url=url, params=params, **kwargs)
             # If forbidden (may be because of rate-limit timeout.  If so,
             # we'll wait and then retry).
@@ -85,7 +80,6 @@ def request_with_retry(available_since: int,
                 # If it is the rate-limit abuse protection, there will be such
                 # field.
                 retry_after = resp.headers.get(RETRY_AFTER_STR)
-                # If it is the abuse protection.
                 if retry_after is not None:
                     # Setting the 'available_since' according to the server
                     # response.
@@ -105,7 +99,7 @@ def request_with_retry(available_since: int,
                         # This method is not responsible for this
                         return resp
             # If some other case. It may be a success, or it may be an another
-            # error. Anyway this method is not responsible for this.
+            # error.  Anyway this method is not responsible for this.
             else:
                 return resp
 
@@ -145,9 +139,7 @@ def resolve_anon_and_push_to_queue(repo: dict,
     # an option to find an account by the user name (not login).
     # But names are not unique.
 
-    # repo['commits_url'] ends with '/commits{/sha}'.  Removing
-    # the last 6.
-    # return  # TODO
+    # repo['commits_url'] ends with '/commits{/sha}'.  Removing the last 6.
     commits_url = repo['commits_url'][:-6]
     # Remember, we only need one commit.
     commits_response = request_with_retry(
@@ -158,20 +150,19 @@ def resolve_anon_and_push_to_queue(repo: dict,
             'per_page': 1
         },
         headers=api_headers)
-    # print('com_re:' + str(commits_response.json())) #TODO
     commit = commits_response.json()[0]
     # Check whether the email is linked to a GitHub profile.
     if commit['author'] is not None:
         contributor_login = commit['author']['login']
         # We can also get the user's name right from a commit.
         contributor_name = commit['commit']['author']['name']
-        # Add the resolved user to the queue.
         queue.put(ContributorData(
             login=contributor_login,
             name=contributor_name,
             num_contributions=contributor['contributions']))
-    # This contributor is not linked to any GitHub account.
+    # If this contributor is not linked to any GitHub account.
     # else:
+    #     pass
 
 
 def process_contributors_one_page(repo: dict,
@@ -184,6 +175,13 @@ def process_contributors_one_page(repo: dict,
     Processes a specified page of the repo contributors list. Non-anonymous
     contributors are written to repo_contributors_dict, anonymous
     contributors are put into anon_queue.
+    :param repo: A repo, whose contributors are being processed.
+    :param page_num: The number of page to process.
+    :param per_page: Number of contributors the API will return per page.
+    :param repo_contributors_dict: A dict to which non-anonymous
+    contributors must be written.
+    :param anon_queue: A Queue to which initially-anonymous contributor
+    entries must be added.
     :param page_data: A contributors list. If specified, the API request is
     not performed and the data is taken from this list. Parameters 'repo',
     'page_num' and 'per_page' do not matter in that case.
@@ -194,46 +192,44 @@ def process_contributors_one_page(repo: dict,
     # A list that holds threads which are responsible for resolving
     # anonymous entries to ContributorData class instances.
     anon_user_threads = []
-    contributors_response = request_with_retry(
-        available_since=github_api_available_since,
-        url=repo['contributors_url'],
-        params={
-            'anon': True,
-            'per_page': per_page,
-            'page': page_num
-        },
-        headers=api_headers)
-    contributors = contributors_response.json()
+    # If we already have the page data.
+    if page_data is not None:
+        contributors = page_data
+    else:
+        contributors = request_with_retry(
+            available_since=github_api_available_since,
+            url=repo['contributors_url'],
+            params={
+                'anon': True,
+                'per_page': per_page,
+                'page': page_num
+            },
+            headers=api_headers
+        ).json()
     for contributor in contributors:
-        # print('contr_debug: ' + str(contributor))#TODO
         if contributor['type'] == 'User':
             # A non-anonymous contributor entry can only be seen once in
             # one repository, there's no need to check if the user is
             # already in the dictionary.
-            # Add a new contributor's data structure to the dict.
             contributor_record = ContributorData(
                 login=contributor['login'],
                 num_contributions=contributor['contributions'])
-            repo_contributors_dict[contributor['login']] = \
+            repo_contributors_dict[contributor_record.login] = \
                 contributor_record
             # User's name is not provided in contributor data entry.
-            # We need to access GitHub user profile. Let's not wait and
-            # give this job to another thread. He'll do fine, don't worry.
+            # We need to access GitHub user profile to obtain it. Requesting
+            # it may take some time, creating a thread.
             user_thread = Thread(target=assign_contributor_name,
                                  args=(
                                      contributor_record,
                                      contributor['url']
                                  ))
-            """assign_contributor_name(contributor_record, contributor['url'])"""
-            # TODO threading
             user_thread.start()
             non_anon_user_threads.append(user_thread)
         # If the contributor's data is anonymous (we only know his
         # email, name, and the number of contributions he made).
         else:
-            # print(contributor['email'] + ': ' + str(contributor[
-            #    'contributions'])) # TODO
-            # Gonna let another thread get de-anonymize them, and then
+            # Gonna let another thread de-anonymize them, and then
             # put to a queue. We'll get back to them later.
             anon_user_thread = Thread(
                 target=resolve_anon_and_push_to_queue,
@@ -242,8 +238,6 @@ def process_contributors_one_page(repo: dict,
                     contributor,
                     anon_queue
                 ))
-            """resolve_anon_and_push_to_queue(repo, contributor, anon_queue)"""
-            # TODO threading
             anon_user_thread.start()
             anon_user_threads.append(anon_user_thread)
     # Jobs are given to everyone. Waiting for them to finish.
@@ -255,7 +249,7 @@ def process_contributors_one_page(repo: dict,
           'enqueued so far. Non-anons: {}'.format(page_num, repo['name'],
                                                   anon_queue.qsize(),
                                                   len(repo_contributors_dict)
-                                                  )) # TODO
+                                                  ))
 
 
 def process_contributors_all(repo: dict,
@@ -278,8 +272,9 @@ def process_contributors_all(repo: dict,
     # users. The rest will appear as anonymous contributors without
     # associated GitHub user information".
     #
-    # This means that we'll have to manually associate anonymous listed_contributor
-    # entries with their GitHub accounts by email by searching commits.
+    # This means that we'll have to manually associate anonymous listed
+    # contributor entries with their GitHub accounts by email by searching
+    # commits.
     #
     # This also means that if the user has contributed to the repository using
     # several emails, the 'contributions' field of the retrieved
@@ -287,8 +282,8 @@ def process_contributors_all(repo: dict,
     # contributions this user made, and further in the list we may
     # find anonymous entries, which must be also associated with this user.
 
-    # A queue that hold ContributorData class instances that were given by
-    # GitHub as anonymous listed_contributor entries.
+    # A queue that holds contributors, who were initially given by
+    # GitHub as anonymous contributor entries.
     anon_queue = Queue()
 
     # First we're gonna have to know how many pages there are.
@@ -303,14 +298,11 @@ def process_contributors_all(repo: dict,
             headers=api_headers)
     # Get the last page number from the headers, if it is there.
     last_page_url_dict = contributors_first_page_resp.links.get('last')
-    # If it is not there.
     if last_page_url_dict is not None:
-        # We have the number of the last page.
         last_page_url = last_page_url_dict['url']
-        # Get the last page number from the URL
         num_pages = int(parse_qs(urlparse(last_page_url).query)['page'][0])
-    # That means that all the content is provided in the current response.
     else:
+        # All the content is provided in the current response.
         num_pages = 1
     # Create an additional thread for each additional page. Already acquired
     # page (contributors_first_page_resp) will be processed by this thread.
@@ -353,7 +345,7 @@ def process_contributors_all(repo: dict,
         else:
             # Such user hasn't been listed yet. Adding him.
             repo_contributors_dict[ex_anon.login] = ex_anon
-    print('Done processing contributors "{}".'.format(repo['name']))  #TODO
+    print('Done processing contributors "{}".'.format(repo['name']))
 
 
 def generate_credits():
@@ -364,15 +356,15 @@ def generate_credits():
             token = token_file.readline().strip()
         global api_headers
         api_headers['Authorization'] = 'token ' + token
-        repos_response = request_with_retry(
+        repos_resp = request_with_retry(
             available_since=github_api_available_since,
             url=ENDPOINT,
             params={
                 'per_page': 100
             },
             headers=api_headers)
-        print('Authentication status: ' + repos_response.reason)
-        if repos_response.status_code != 200:
+        print('Authentication status: ' + repos_resp.reason)
+        if repos_resp.status_code != 200:
             print('Authentication failed, proceeding anonymously')
     except OSError:
         sys.stderr.write('Could not open the .token file')
@@ -392,21 +384,22 @@ def generate_credits():
     # Now we're gonna request the list of the repositories.  It may be
     # paginated, so we use a loop.
     # Pre-loop initialization.
-    next_repos_page_url = ENDPOINT + '/orgs/' + GITHUB_ORGANIZATION_NAME + \
-                      '/repos' + '?type=public'
-    # A do-while loop.
+    next_repos_page_url = '{}/orgs/{}/repos'.format(ENDPOINT,
+                                                    GITHUB_ORGANIZATION_NAME)
+    # Do while there are pages left.
     while True:
-        # Request a repositories list page
-        repos_response = request_with_retry(
+        # Request the repositories list page.
+        repos_resp = request_with_retry(
             available_since=github_api_available_since,
             url=next_repos_page_url,
             params={
+                'type': 'public',
                 'per_page': 100
             },
             headers=api_headers)
-        print('Rate limit: ' + repos_response.headers[RATELIMIT_REMAINING_STR] +
-              '/' + repos_response.headers[RATELIMIT_LIMIT_STR])
-        repos = repos_response.json()
+        print('Rate limit: ' + repos_resp.headers[RATELIMIT_REMAINING_STR] +
+              '/' + repos_resp.headers[RATELIMIT_LIMIT_STR])
+        repos = repos_resp.json()
         for repo in repos:
             # Create a new entry in the resulting dict for the current repo.
             curr_repo_dict = {}
@@ -414,26 +407,13 @@ def generate_credits():
             # Create a new thread, write it to the threads dict and start it.
             curr_thread = Thread(target=process_contributors_all,
                                  args=(repo, curr_repo_dict))
-
-
-            """
             curr_thread.start()
-            """
-            process_contributors_all(repo, curr_repo_dict)
-            #
-            #
-            #
-
             repo_threads.append(curr_thread)
-
-
         # 'None'  will be returned if there is no next page.
-        next_repos_page_dict = repos_response.links.get('next')
-        # Stop if there is no more pages left.
+        next_repos_page_dict = repos_resp.links.get('next')
         if next_repos_page_dict is None:
             break
         else:
             next_repos_page_url = next_repos_page_dict['url']
     for repo_thread in repo_threads:
         repo_thread.join()
-    1+1
