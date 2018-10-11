@@ -17,7 +17,8 @@ def read_csv_to_dict(filename: str):
 
 def write_login_by_email_file(login_by_email_dict: dict):
     with open(USERS_FILE, 'wt') as outp:
-        for email, github in sorted(login_by_email_dict.items()):  # TODO does it need to be sorted? Just use list(login_by_email_dict.items())?
+        # TODO does it need to be sorted? Just use list(dict.items())?
+        for email, github in sorted(login_by_email_dict.items()):
             outp.write('{},{}\n'.format(email, github))
 
 
@@ -113,7 +114,7 @@ def update_users_with_release(release, prs):
     added = len(users) - users_init_len
     if added > 0:
         print("Added {} users".format(added))
-        write_login_by_email_file(users)  # TODO replace by append_to_csv()?
+        write_login_by_email_file(users)  # TODO replace with append_to_csv()?
     else:
         print("Users up to date")
 
