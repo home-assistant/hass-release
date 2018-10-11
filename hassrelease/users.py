@@ -96,22 +96,21 @@ def update_users_with_release(release, prs):
     except FileNotFoundError:
         users = {}
 
-    added = 0
+    users_init_len = len(users)
     ask_input = True
 
     for line in release.log_lines():
         try:
-            if resolve_login(users, line.email, pr=line.pr,
-                             prs=prs, ask_input=ask_input, context=line.line):
-                added += 1
+            resolve_login(users, line.email, pr=line.pr,
+                          prs=prs, ask_input=ask_input, context=line.line)
         except KeyboardInterrupt:
             ask_input = False
 
     for email, github in sorted(users.items()):
         if not github:
-            if resolve_login(users, email, ask_input=ask_input):
-                added += 1
+            resolve_login(users, email, ask_input=ask_input)
 
+    added = len(users) - users_init_len
     if added > 0:
         print("Added {} users".format(added))
         write_login_by_email_file(users)  # TODO replace by append_to_csv()?
