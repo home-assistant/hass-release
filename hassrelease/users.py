@@ -93,11 +93,11 @@ def resolve_login(login_by_email: dict, email: str, *, pr=None, prs=None,
 
 def update_users_with_release(release, prs):
     try:
-        users = read_csv_to_dict(USERS_FILE)
+        login_by_email = read_csv_to_dict(USERS_FILE)
     except FileNotFoundError:
-        users = {}
+        login_by_email = {}
 
-    users_init_len = len(users)
+    users_init_len = len(login_by_email)
     ask_input = True
 
     for line in release.log_lines():
@@ -107,15 +107,15 @@ def update_users_with_release(release, prs):
         except KeyboardInterrupt:
             ask_input = False
 
-    for email, github in sorted(users.items()):
+    for email, github in sorted(login_by_email.items()):
         if not github:
             resolve_login(users, email, ask_input=ask_input)
 
-    added = len(users) - users_init_len
+    added = len(login_by_email) - users_init_len
     if added > 0:
         print("Added {} users".format(added))
-        write_login_by_email_file(users)  # TODO replace with append_to_csv()?
+        write_login_by_email_file(login_by_email)  # TODO replace with append_to_csv()?
     else:
         print("Users up to date")
 
-    return users
+    return login_by_email
