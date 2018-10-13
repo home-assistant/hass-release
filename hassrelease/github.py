@@ -70,7 +70,7 @@ class MyGitHub:
     RATELIMIT_RESET_STR = 'X-RateLimit-Reset'
     RETRY_AFTER_STR = 'Retry-After'
 
-    def __init__(self, token=None):
+    def __init__(self, token: str=None):
         # The time when the GitHub API is going to be available.
         self.next_time_available = 0
         self.headers = {
