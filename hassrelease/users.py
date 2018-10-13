@@ -67,14 +67,14 @@ def update_users_with_release(release, prs):
 
     for line in release.log_lines():
         try:
-            resolve_login(users, line.email, pr=line.pr,
+            resolve_login(login_by_email, line.email, pr=line.pr,
                           prs=prs, ask_input=ask_input, context=line.line)
         except KeyboardInterrupt:
             ask_input = False
 
     for email, github in sorted(login_by_email.items()):
         if not github:
-            resolve_login(users, email, ask_input=ask_input)
+            resolve_login(login_by_email, email, ask_input=ask_input)
 
     added = len(login_by_email) - users_init_len
     if added > 0:
