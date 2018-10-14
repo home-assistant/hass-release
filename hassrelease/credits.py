@@ -181,6 +181,7 @@ def do_requests(wip_status: WipStatus):
         new_work_or_done.release()
         rq_task.set_response()
         handle_response_tasks.put(rq_task)
+        wip_status.working = False
 
 
 def generate_credits(num_simul_requests, no_cache):
