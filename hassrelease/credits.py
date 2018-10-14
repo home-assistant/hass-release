@@ -7,6 +7,8 @@ from .users import read_csv_to_dict
 import sys
 from queue import Queue
 from collections import defaultdict
+import pystache
+import time
 
 
 # According to https://developer.github.com/v3/repos/#list-contributors,
@@ -282,4 +284,40 @@ def generate_credits(num_simul_requests, no_cache):
                     new_work_or_done.notify_all()
     for worker in request_workers:
         worker.join()
-    print(org_contributors_dict)
+    name_by_login_file.close()
+    login_by_email_file.close()
+    # Writing the credits page.
+    users_context = {}
+    for login, user_contribs_dict in org_contributors_dict.items():
+        count_string = ''
+        user_total_contribs = 0
+        for repo_name, num_contribs in sorted(user_contribs_dict.items(),
+                                              key=lambda x: x[1],
+                                              reverse=True):
+            count_string += '{} {} to {}\n'.format(num_contribs,
+                'commits' if num_contribs>1 else 'commit', repo_name)
+            user_total_contribs += num_contribs
+        count_string = '{} total commits to the home-assistant ' \
+                       'organization:\n{}'.format(user_total_contribs,
+                                                 count_string)
+        # TODO change name regex?
+        users_context[login] = {
+            'info': {
+                'name': name_by_login[login],
+                'username': login
+            },
+            'countString': count_string
+        }
+    fearlessLeader = users_context.pop('balloob')
+    context = {
+        'allUsers': users_context.values(),
+        'fearlessLeader': fearlessLeader,
+        'headerDate': time.strftime('%Y-%m-%d, %X +0000', time.gmtime()),
+        'footerDate': time.strftime('%A, %B %d %Y, %X UTC', time.gmtime()),
+    }
+    # TODO use the 'arrow' module for date and time? Necessary?
+    template_file = open(CREDITS_TEMPLATE_FILE, 'r')
+    credits_page_file = open(CREDITS_PAGE, 'w', encoding='utf-8')
+    credits_page_file.write(pystache.render(template_file.read(), context))
+    template_file.close()
+    credits_page_file.close()
