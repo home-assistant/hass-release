@@ -6,6 +6,7 @@ from .const import TOKEN_FILE, LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE,\
 from .users import read_csv_to_dict
 import sys
 from queue import Queue
+from collections import defaultdict
 
 
 # According to https://developer.github.com/v3/repos/#list-contributors,
@@ -32,7 +33,7 @@ from queue import Queue
 #     }
 #     ...
 # }
-org_contributors_dict = {}
+org_contributors_dict = defaultdict(dict)
 name_by_login = {}
 login_by_email = {}
 name_by_login_file = None
@@ -79,7 +80,6 @@ class ReposPageTask(RequestTask):
             new_task = ReposPageTask(next_page_url)
             enqueue_request_task_and_notify_worker(new_task)
         for repo in self.response.json():
-            org_contributors_dict[repo['name']] = {}
             new_task = ContributorsPageTask(repo['contributors_url'],
                                             repo,
                                             params={
@@ -106,7 +106,7 @@ class ContributorsPageTask(RequestTask):
                     # Requesting contributor's profile page to know his name.
                     new_task = ResolveNameByLoginTask(contr['url'], self.repo)
                     enqueue_request_task_and_notify_worker(new_task)
-                org_contributors_dict[self.repo['name']][contr['login']] = \
+                org_contributors_dict[contr['login']][self.repo['name']] = \
                     contr['contributions']
             # contr['type'] == 'Anonymous'
             else:
@@ -125,12 +125,12 @@ class ContributorsPageTask(RequestTask):
                     enqueue_request_task_and_notify_worker(new_task)
                 else:
                     contributions_already = \
-                        org_contributors_dict[self.repo['name']].get(login)
+                        org_contributors_dict[login].get(self.repo['name'])
                     if contributions_already is not None:
-                        org_contributors_dict[self.repo['name']][login] = \
+                        org_contributors_dict[login][self.repo['name']] = \
                             contr['contributions'] + contributions_already
                     else:
-                        org_contributors_dict[self.repo['name']][login] = \
+                        org_contributors_dict[login][self.repo['name']] = \
                             contr['contributions']
 
 
@@ -160,12 +160,12 @@ class HandleAnonTask(RequestTask):
         if commit['author'] is not None:
             login = commit['author']['login']
             contributions_already =\
-                org_contributors_dict[self.repo['name']].get(login)
+                org_contributors_dict[login].get(self.repo['name'])
             if contributions_already is not None:
-                org_contributors_dict[self.repo['name']][login] =\
+                org_contributors_dict[login][self.repo['name']] =\
                     self.contributor['contributions'] + contributions_already
             else:
-                org_contributors_dict[self.repo['name']][login] =\
+                org_contributors_dict[login][self.repo['name']] =\
                     self.contributor['contributions']
             login_by_email[self.contributor['email']] = login
             login_by_email_file.write(
