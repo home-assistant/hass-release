@@ -1,5 +1,6 @@
 TOKEN_FILE = '.token'
-USERS_FILE = 'data/users.csv'
+LOGIN_BY_EMAIL_FILE = 'data/users.csv'
+NAME_BY_LOGIN_FILE = 'data/name_by_login.csv'
 NOTES_FILE = 'notes.txt'
 GH_NO_EMAIL_SUFFIX = '@users.noreply.github.com'
 LABEL_CHERRY_PICKED = 'cherry-picked'

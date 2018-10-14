@@ -1,7 +1,9 @@
 from .const import GITHUB_ORGANIZATION_NAME
 from threading import Thread, Condition
 from .github import MyGitHub
-from .const import TOKEN_FILE
+from .const import TOKEN_FILE, LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE,\
+    CREDITS_TEMPLATE_FILE, CREDITS_PAGE
+from .users import read_csv_to_dict
 import sys
 from queue import Queue
 
@@ -31,8 +33,10 @@ from queue import Queue
 #     ...
 # }
 org_contributors_dict = {}
-name_by_login = {}  # TODO cache file input/output
-login_by_email = {}  # TODO cache file input/output
+name_by_login = {}
+login_by_email = {}
+name_by_login_file = None
+login_by_email_file = None
 request_tasks = Queue()  # Elements' type - RequestTask.
 handle_response_tasks = Queue()  # Elements' type - HandleResponseTask
 # Used to tell request_workers that there's a new request work to do. Or
@@ -98,25 +102,36 @@ class ContributorsPageTask(RequestTask):
             enqueue_request_task_and_notify_worker(new_task)
         for contr in self.response.json():
             if contr['type'] == 'User':
-                # TODO resolve through cache
-                # Requesting contributor's profile page to know his name.
-                new_task = ResolveNameByLoginTask(contr['url'], self.repo)
-                enqueue_request_task_and_notify_worker(new_task)
+                if contr['login'] not in name_by_login:
+                    # Requesting contributor's profile page to know his name.
+                    new_task = ResolveNameByLoginTask(contr['url'], self.repo)
+                    enqueue_request_task_and_notify_worker(new_task)
                 org_contributors_dict[self.repo['name']][contr['login']] = \
                     contr['contributions']
             # contr['type'] == 'Anonymous'
             else:
-                # TODO resolve through cache
-                # repo['commits_url'] ends with '/commits{/sha}'.
-                # Removing the last 6.
-                commits_url = self.repo['commits_url'][:-6]
-                # Get contributor's login and name by a commit he made.
-                new_task = HandleAnonTask(commits_url, contr, self.repo,
-                                          params={
-                                              'author': contr['email'],
-                                              'per_page': 1
-                                          })
-                enqueue_request_task_and_notify_worker(new_task)
+                login = login_by_email.get(contr['email'])
+                if login is None:
+                    # Retrieving contributor's login and name by a commit.
+                    # repo['commits_url'] ends with '/commits{/sha}'.
+                    # Removing the last 6.
+                    commits_url = self.repo['commits_url'][:-6]
+                    # Get contributor's login and name by a commit he made.
+                    new_task = HandleAnonTask(commits_url, contr, self.repo,
+                                              params={
+                                                  'author': contr['email'],
+                                                  'per_page': 1
+                                              })
+                    enqueue_request_task_and_notify_worker(new_task)
+                else:
+                    contributions_already = \
+                        org_contributors_dict[self.repo['name']].get(login)
+                    if contributions_already is not None:
+                        org_contributors_dict[self.repo['name']][login] = \
+                            contr['contributions'] + contributions_already
+                    else:
+                        org_contributors_dict[self.repo['name']][login] = \
+                            contr['contributions']
 
 
 class ResolveNameByLoginTask(RequestTask):
@@ -128,6 +143,8 @@ class ResolveNameByLoginTask(RequestTask):
         user = self.response.json()
         # If the user has not specified the name, use his login
         name_by_login[user['login']] = user['name'] or user['login']
+        name_by_login_file.write(
+            '{},{}\n'.format(user['login'], user['name'] or user['login']))
 
 
 class HandleAnonTask(RequestTask):
@@ -141,17 +158,22 @@ class HandleAnonTask(RequestTask):
         commit = self.response.json()[0]
         # Check whether the email is linked to a GitHub profile.
         if commit['author'] is not None:
-            user_login = commit['author']['login']
-            if user_login in org_contributors_dict[self.repo['name']]:
-                org_contributors_dict[self.repo['name']][user_login] += \
-                    self.contributor['contributions']
+            login = commit['author']['login']
+            contributions_already =\
+                org_contributors_dict[self.repo['name']].get(login)
+            if contributions_already is not None:
+                org_contributors_dict[self.repo['name']][login] =\
+                    self.contributor['contributions'] + contributions_already
             else:
-                org_contributors_dict[self.repo['name']][user_login] =\
+                org_contributors_dict[self.repo['name']][login] =\
                     self.contributor['contributions']
-            login_by_email[self.contributor['email']] = user_login
+            login_by_email[self.contributor['email']] = login
+            login_by_email_file.write(
+                '{},{}\n'.format(self.contributor['email'], login))
             # We can also get the user's name right from the commit.
             user_name = commit['commit']['author']['name']
-            name_by_login[user_login] = user_name
+            name_by_login[login] = user_name
+            name_by_login_file.write('{},{}\n'.format(login, user_name))
 
 
 class WipStatus:
@@ -196,6 +218,28 @@ def generate_credits(num_simul_requests, no_cache):
         sys.stderr.write('Could not open the .token file')
         print('Retrieving the data anonymously')
         gh = MyGitHub(token=None)
+    global login_by_email
+    try:
+        login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
+    except OSError:
+        print('Could not read the login-by-email file. Proceeding without '
+              'the cache.')
+        login_by_email = {}
+    global name_by_login
+    try:
+        name_by_login = read_csv_to_dict(NAME_BY_LOGIN_FILE, encoding='utf-8')
+    except OSError:
+        print('Could not read the name-by-login file. Proceeding without '
+              'the cache.')
+        name_by_login = {}
+    global login_by_email_file
+    global name_by_login_file
+    if no_cache:
+        login_by_email_file = open(LOGIN_BY_EMAIL_FILE, 'w')
+        name_by_login_file = open(NAME_BY_LOGIN_FILE, 'w', encoding='utf-8')
+    else:
+        login_by_email_file = open(LOGIN_BY_EMAIL_FILE, 'a')
+        name_by_login_file = open(NAME_BY_LOGIN_FILE, 'a', encoding='utf-8')
     # Test the API.
     resp = gh.request_with_retry(MyGitHub.ENDPOINT)
     print('Status: {}. Message: {}. Rate-Limit remaining: {}'

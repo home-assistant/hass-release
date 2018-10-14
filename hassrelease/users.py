@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-from .const import GH_NO_EMAIL_SUFFIX, USERS_FILE
+from .const import GH_NO_EMAIL_SUFFIX, LOGIN_BY_EMAIL_FILE
 
 
-def read_csv_to_dict(filename: str):
+def read_csv_to_dict(filename: str, encoding: str=None):
     data = {}
-    with open(filename) as inp:
+    with open(filename, encoding=encoding) as inp:
         for lin in inp:
             if ',' not in lin:
                 lin = lin.strip() + ','
@@ -14,16 +14,23 @@ def read_csv_to_dict(filename: str):
 
 
 def write_login_by_email_file(login_by_email_dict: dict):
-    with open(USERS_FILE, 'wt') as outp:
+    with open(LOGIN_BY_EMAIL_FILE, 'wt') as outp:
         # TODO does it need to be sorted? Just use list(dict.items())?
         for email, github in sorted(login_by_email_dict.items()):
             outp.write('{},{}\n'.format(email, github))
 
 
-def append_dict_to_csv(data: dict, filename: str):
-    with open(filename, 'a') as file:
-        for key, value in list(data.items()):
-            file.write('{},{}\n'.format(key, value))
+def append_to_csv(key: str, value: str, file):
+    file.write('{},{}\n'.format(key, value))
+
+
+def write_dict_to_csv(data: dict, filename: str):
+    try:
+        with open(filename, 'w') as file:
+            for key, value, in list(data.items()):
+                file.write('{},{}\n'.format(key, value))
+    except OSError:
+        print('Could not write the file ' + filename)
 
 
 def resolve_login(users, email, *, pr=None, prs=None, ask_input=True, context=None):
@@ -58,7 +65,7 @@ def resolve_login(users, email, *, pr=None, prs=None, ask_input=True, context=No
 
 def update_users_with_release(release, prs):
     try:
-        login_by_email = read_csv_to_dict(USERS_FILE)
+        login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
     except FileNotFoundError:
         login_by_email = {}
 
