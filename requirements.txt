@@ -1,3 +1,4 @@
+pystache
 requests
 github3.py==1.2.0
 click
