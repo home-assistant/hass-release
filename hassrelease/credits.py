@@ -112,6 +112,10 @@ class ContributorsPageTask(RequestTask):
             else:
                 login = login_by_email.get(contr['email'])
                 if login is None:
+                    # We could just get the login right from the email
+                    # address, if it is '@users.noreply.github.com'-like,
+                    # but we'll need to request the user name after that
+                    # anyway.
                     # Retrieving contributor's login and name by a commit.
                     # repo['commits_url'] ends with '/commits{/sha}'.
                     # Removing the last 6.
@@ -284,7 +288,7 @@ def generate_credits(num_simul_requests, no_cache):
                                               key=lambda x: x[1],
                                               reverse=True):
             count_string += '{} {} to {}\n'.format(num_contribs,
-                'commits' if num_contribs>1 else 'commit', repo_name)
+                'commits' if num_contribs > 1 else 'commit', repo_name)
             user_total_contribs += num_contribs
         count_string = '{} total commits to the home-assistant ' \
                        'organization:\n{}'.format(user_total_contribs,
