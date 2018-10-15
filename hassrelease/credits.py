@@ -38,8 +38,6 @@ import time
 org_contributors_dict = defaultdict(dict)
 name_by_login = {}
 login_by_email = {}
-name_by_login_file = None
-login_by_email_file = None
 request_tasks = Queue()  # Elements' type - RequestTask.
 handle_response_tasks = Queue()  # Elements' type - HandleResponseTask
 # Used to tell request_workers that there's a new request work to do. Or
@@ -145,8 +143,6 @@ class ResolveNameByLoginTask(RequestTask):
         user = self.response.json()
         # If the user has not specified the name, use his login
         name_by_login[user['login']] = user['name'] or user['login']
-        name_by_login_file.write(
-            '{},{}\n'.format(user['login'], user['name'] or user['login']))
 
 
 class HandleAnonTask(RequestTask):
@@ -170,12 +166,9 @@ class HandleAnonTask(RequestTask):
                 org_contributors_dict[login][self.repo['name']] =\
                     self.contributor['contributions']
             login_by_email[self.contributor['email']] = login
-            login_by_email_file.write(
-                '{},{}\n'.format(self.contributor['email'], login))
             # We can also get the user's name right from the commit.
             user_name = commit['commit']['author']['name']
             name_by_login[login] = user_name
-            name_by_login_file.write('{},{}\n'.format(login, user_name))
 
 
 class WipStatus:
@@ -234,14 +227,6 @@ def generate_credits(num_simul_requests, no_cache):
         print('Could not read the name-by-login file. Proceeding without '
               'the cache.')
         name_by_login = {}
-    global login_by_email_file
-    global name_by_login_file
-    if no_cache:
-        login_by_email_file = open(LOGIN_BY_EMAIL_FILE, 'w')
-        name_by_login_file = open(NAME_BY_LOGIN_FILE, 'w', encoding='utf-8')
-    else:
-        login_by_email_file = open(LOGIN_BY_EMAIL_FILE, 'a')
-        name_by_login_file = open(NAME_BY_LOGIN_FILE, 'a', encoding='utf-8')
     # Test the API.
     resp = gh.request_with_retry(MyGitHub.ENDPOINT)
     print('Status: {}. Message: {}. Rate-Limit remaining: {}'
@@ -284,8 +269,12 @@ def generate_credits(num_simul_requests, no_cache):
                     new_work_or_done.notify_all()
     for worker in request_workers:
         worker.join()
-    name_by_login_file.close()
-    login_by_email_file.close()
+    with open(NAME_BY_LOGIN_FILE, 'w', encoding='utf-8') as f:
+        for login, name in name_by_login.items():
+            f.write('{},{}\n'.format(login, name))
+    with open(LOGIN_BY_EMAIL_FILE, 'w') as f:
+        for email, login in login_by_email.items():
+            f.write('{},{}\n'.format(email, login))
     # Writing the credits page.
     users_context = {}
     for login, user_contribs_dict in org_contributors_dict.items():
