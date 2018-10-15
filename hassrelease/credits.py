@@ -218,18 +218,23 @@ def generate_credits(num_simul_requests, no_cache):
         print('Retrieving the data anonymously')
         gh = MyGitHub(token=None)
     global login_by_email
-    try:
-        login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
-    except OSError:
-        print('Could not read the login-by-email file. Proceeding without '
-              'the cache.')
-        login_by_email = {}
     global name_by_login
-    try:
-        name_by_login = read_csv_to_dict(NAME_BY_LOGIN_FILE, encoding='utf-8')
-    except OSError:
-        print('Could not read the name-by-login file. Proceeding without '
-              'the cache.')
+    if not no_cache:
+        try:
+            login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
+        except OSError:
+            print('Could not read the login-by-email file. Proceeding without '
+                  'the cache.')
+            login_by_email = {}
+        try:
+            name_by_login = read_csv_to_dict(NAME_BY_LOGIN_FILE,
+                                             encoding='utf-8')
+        except OSError:
+            print('Could not read the name-by-login file. Proceeding without '
+                  'the cache.')
+            name_by_login = {}
+    else:
+        login_by_email = {}
         name_by_login = {}
     # Test the API.
     resp = gh.request_with_retry(MyGitHub.ENDPOINT)
