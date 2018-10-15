@@ -9,6 +9,7 @@ from queue import Queue
 from collections import defaultdict
 import pystache
 import time
+import re
 
 
 # According to https://developer.github.com/v3/repos/#list-contributors,
@@ -297,11 +298,16 @@ def generate_credits(num_simul_requests, no_cache):
             user_total_contribs += num_contribs
         count_string = '{} total commits to the home-assistant ' \
                        'organization:\n{}'.format(user_total_contribs,
-                                                 count_string)
-        # TODO change name regex?
+                                                  count_string)
+        name = name_by_login[login]
+        name = re.sub(r'^(@)', r'', name)
+        # TODO Mustache will escape these. Or will it?
+        # name = name.replace('<', '&lt;')
+        # name = name.replace('>', '&gt;')
+        name = re.sub(r'([\\`*_{}[\]()#+-.!~|])', r'\\\1', name)
         users_context[login] = {
             'info': {
-                'name': name_by_login[login],
+                'name': name,
                 'login': login
             },
             'countString': count_string
