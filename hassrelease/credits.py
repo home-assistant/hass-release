@@ -283,6 +283,7 @@ def generate_credits(num_simul_requests, no_cache):
         for login, name in name_by_login.items():
             f.write('{},{}\n'.format(login, name))
     with open(LOGIN_BY_EMAIL_FILE, 'w') as f:
+        # TODO does it need to be sorted?
         for email, login in login_by_email.items():
             f.write('{},{}\n'.format(email, login))
     # Writing the credits page.
