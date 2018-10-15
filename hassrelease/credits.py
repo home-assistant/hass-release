@@ -293,13 +293,14 @@ def generate_credits(num_simul_requests, no_cache):
         users_context[login] = {
             'info': {
                 'name': name_by_login[login],
-                'username': login
+                'login': login
             },
             'countString': count_string
         }
     fearlessLeader = users_context.pop('balloob')
     context = {
-        'allUsers': users_context.values(),
+        'allUsers': sorted(users_context.values(),
+                           key=lambda x: x['info']['name']),
         'fearlessLeader': fearlessLeader,
         'headerDate': time.strftime('%Y-%m-%d, %X +0000', time.gmtime()),
         'footerDate': time.strftime('%A, %B %d %Y, %X UTC', time.gmtime()),
