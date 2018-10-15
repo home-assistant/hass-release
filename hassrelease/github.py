@@ -73,11 +73,24 @@ class MyGitHub:
     def __init__(self, token: str=None):
         # The time when the GitHub API is going to be available.
         self.next_time_available = 0
+        self.last_logged_next_time_available = self.next_time_available
         self.headers = {
             'Accept': 'application/vnd.github.v3+json'
         }
         if token is not None:
             self.headers['Authorization'] = 'token ' + token
+
+    def log_timeout(self, available_after):
+        if self.last_logged_next_time_available == self.next_time_available:
+            pass
+        else:
+            print('GitHub API is temporarily unavailable due to rate '
+                  'limit restrictions. Retrying in {} (at {})'
+                  .format(time.strftime('%H:%m:%S',
+                                        time.gmtime(available_after)),
+                          time.asctime(time.gmtime(time.time() +
+                                                   available_after))))
+            self.last_logged_next_time_available = self.next_time_available
 
     def request_with_retry(self, url: str, params: dict=None):
         """
@@ -93,12 +106,7 @@ class MyGitHub:
         while True:
             available_after = self.next_time_available - int(time.time())
             if available_after > 0:
-                print('GitHub API is temporarily unavailable due to rate '
-                      'limit restrictions. Retrying in {}s (at {})'
-                      .format(available_after,
-                              time.asctime(time.gmtime(time.time() +
-                                                       available_after))))
-                # TODO print
+                self.log_timeout(available_after)
                 time.sleep(available_after)
             # The API must be available at that point
             resp = requests.get(url=url, params=params,
