@@ -15,22 +15,8 @@ def read_csv_to_dict(filename: str, encoding: str=None):
 
 def write_login_by_email_file(login_by_email_dict: dict):
     with open(LOGIN_BY_EMAIL_FILE, 'wt') as outp:
-        # TODO does it need to be sorted? Just use list(dict.items())?
         for email, github in sorted(login_by_email_dict.items()):
             outp.write('{},{}\n'.format(email, github))
-
-
-def append_to_csv(key: str, value: str, file):
-    file.write('{},{}\n'.format(key, value))
-
-
-def write_dict_to_csv(data: dict, filename: str):
-    try:
-        with open(filename, 'w') as file:
-            for key, value, in list(data.items()):
-                file.write('{},{}\n'.format(key, value))
-    except OSError:
-        print('Could not write the file ' + filename)
 
 
 def resolve_login(users, email, *, pr=None, prs=None, ask_input=True, context=None):
@@ -86,7 +72,7 @@ def update_users_with_release(release, prs):
     added = len(login_by_email) - users_init_len
     if added > 0:
         print("Added {} users".format(added))
-        write_login_by_email_file(login_by_email)  # TODO replace with append_to_csv()?
+        write_login_by_email_file(login_by_email)
     else:
         print("Users up to date")
 
