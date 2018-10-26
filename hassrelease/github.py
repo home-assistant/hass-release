@@ -84,9 +84,8 @@ class MyGitHub:
         if self.last_logged_next_time_available == self.next_time_available:
             pass
         else:
-            print('GitHub API is temporarily unavailable due to rate '
-                  'limit restrictions. Retrying in {} (at {})'
-                  .format(time.strftime('%H:%m:%S',
+            print('Rate limit exceeded. Retrying in {} (at {})'
+                  .format(time.strftime('%H:%M:%S',
                                         time.gmtime(available_after)),
                           time.asctime(time.gmtime(time.time() +
                                                    available_after))))
