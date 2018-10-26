@@ -155,7 +155,7 @@ def unmerged_docs(branch, release):
 
 @cli.command(help='Generate credits page'
                   ' (../home-assistant.io/source/developers/credits.markdown)')
-@click.option('-r', '--simul-requests', default=10, type=click.IntRange(min=1),
+@click.option('-r', '--simul-requests', default=63, type=click.IntRange(min=1),
               show_default=True, help='Defines how many API requests can be '
                                       'performed simultaneously')
 @click.option('-c', '--no-cache', is_flag=True,
