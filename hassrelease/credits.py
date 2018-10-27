@@ -300,6 +300,9 @@ def generate_credits(num_simul_requests, no_cache):
         count_string = '{} total commits to the home-assistant ' \
                        'organization:\n{}'.format(user_total_contribs,
                                                   count_string)
+        # TODO if the login_by_email file contains some users that
+        # name_by_login file does not contain, (for example if it was modified
+        # by 'hassrelease release-notes' run), a KeyError will occur here.
         name = name_by_login[login]
         name = re.sub(r'^(@)', r'', name)
         # TODO Mustache will escape these. Or will it?
