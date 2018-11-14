@@ -60,8 +60,8 @@ def get_latest_version_milestone(repo):
     return list(reversed(sorted(milestones)))[0][1]
 
 
+# TODO replace with a function? Use 'partial'.
 class MyGitHub:
-
     # GitHub API endpoint address
     ENDPOINT = 'https://api.github.com'
     # GitHub API response header keys.

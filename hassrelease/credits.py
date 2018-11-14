@@ -12,22 +12,6 @@ import time
 import re
 
 
-# According to https://developer.github.com/v3/repos/#list-contributors,
-# "GitHub identifies contributors by author email address" and "only the
-# first 500 author email addresses in the repository link to GitHub
-# users. The rest will appear as anonymous contributors without
-# associated GitHub user information".
-#
-# This means that we'll have to manually associate anonymous listed
-# contributor entries with their GitHub accounts by email by searching
-# commits.
-#
-# This also means that if the user has contributed to the repository using
-# several emails, the 'contributions' field of the retrieved
-# non-anonymous user entry may not display the actual number of
-# contributions this user made, and further in the list we may
-# find anonymous entries, which must be also associated with this user.
-
 # Dict structure:
 # {
 #     <repository_name>: {
@@ -36,6 +20,7 @@ import re
 #     }
 #     ...
 # }
+# TODO rewrite globals using partial?
 org_contributors_dict = defaultdict(dict)
 name_by_login = {}
 login_by_email = {}
@@ -48,16 +33,30 @@ gh = None
 default_per_page = 100
 
 
+# TODO make RequestTasks construct URL by themselves
 class RequestTask:
+    """
+    Base class for particular tasks. For each task, two actions must be
+    performed:
+    1. Access GitHub API to get corresponding data.
+    2. Handle obtained data.
+    """
     def __init__(self, url: str, params: dict=None):
+        """
+        :param url: API URL to be requested.
+        :param params: Request's query string parameters.
+        """
         self.url = url
-        self.params = params  # Request query string parameters.
+        self.params = params
         self.response = None
 
-    def set_response(self):
+    def do_request(self):
+        """Action #1. Access GitHub API."""
         self.response = gh.request_with_retry(self.url, self.params)
 
-    def do(self):
+    def handle_response(self):
+        """Action #2. Handle the response."""
+        assert self.response is not None
         pass
 
     def __repr__(self):
@@ -74,7 +73,12 @@ def enqueue_request_task_and_notify_worker(task: RequestTask):
 
 
 class ReposPageTask(RequestTask):
-    def do(self):
+    def handle_response(self):
+        """
+        For each repo enqueue a ContributorsPageTask. If this repos page
+        is not the last, enqueue an additional ReposPageTask for the next page.
+        """
+        super(ReposPageTask, self).handle_response()
         next_page_url_dict = self.response.links.get('next')
         if next_page_url_dict is not None:
             next_page_url = next_page_url_dict['url']
@@ -92,10 +96,35 @@ class ReposPageTask(RequestTask):
 
 class ContributorsPageTask(RequestTask):
     def __init__(self, url: str, repo: dict, params: dict=None):
+        """
+        :param repo: The repository, whose contributors are to process.
+        """
         super().__init__(url, params)
         self.repo = repo
 
-    def do(self):
+    def handle_response(self):
+        """Process contributors, list them in the org_contributors_dict. If
+        this contributors page is not the last, enqueue a new
+        ContributorsPageTask for the next page.
+        """
+        """
+        According to https://developer.github.com/v3/repos/#list-contributors,
+        "GitHub identifies contributors by author email address" and "only the
+        first 500 author email addresses in the repository link to GitHub
+        users. The rest will appear as anonymous contributors without
+        associated GitHub user information".
+        
+        This means that we'll have to manually associate anonymous listed
+        contributor entries with their GitHub accounts by email by searching
+        commits.
+
+        This also means that if the user has contributed to the repository 
+        using several emails, the 'contributions' field of a retrieved
+        non-anonymous user entry may not display the actual number of
+        contributions this user made, and further in the list we may
+        find anonymous entries, which must be also associated with this user.
+        """
+        super(ContributorsPageTask, self).handle_response()
         next_page_url_dict = self.response.links.get('next')
         if next_page_url_dict is not None:
             next_page_url = next_page_url_dict['url']
@@ -105,7 +134,7 @@ class ContributorsPageTask(RequestTask):
             if contr['type'] == 'User':
                 if contr['login'] not in name_by_login:
                     # Requesting contributor's profile page to know his name.
-                    new_task = ResolveNameByLoginTask(contr['url'], self.repo)
+                    new_task = ResolveNameByLoginTask(contr['url'])
                     enqueue_request_task_and_notify_worker(new_task)
                 org_contributors_dict[contr['login']][self.repo['name']] = \
                     contr['contributions']
@@ -140,24 +169,32 @@ class ContributorsPageTask(RequestTask):
 
 
 class ResolveNameByLoginTask(RequestTask):
-    def __init__(self, url: str, repo: dict, params: dict=None):
-        super().__init__(url, params)
-        self.repo = repo
-
-    def do(self):
+    """A task to get user's name by accessing his GitHub profile."""
+    def handle_response(self):
+        """
+        Add user's name to the name_by_login dict. If the user has not
+        specified his name, use the login as the name.
+        """
+        super(ResolveNameByLoginTask, self).handle_response()
         user = self.response.json()
         # If the user has not specified the name, use his login
         name_by_login[user['login']] = user['name'] or user['login']
 
 
 class HandleAnonTask(RequestTask):
+    """A task to handle an anonymous contributor entry."""
     def __init__(self, url: str, contributor: dict, repo: dict,
                  params: dict=None):
         super().__init__(url, params)
         self.contributor = contributor
         self.repo = repo
 
-    def do(self):
+    def handle_response(self):
+        """
+        Add the contributor to the org_contributors_dict, if the user
+        information can be retrieved, do nothing otherwise.
+        """
+        super(HandleAnonTask, self).handle_response()
         commit = self.response.json()[0]
         # Check whether the email is linked to a GitHub profile.
         if commit['author'] is not None:
@@ -177,16 +214,17 @@ class HandleAnonTask(RequestTask):
 
 
 class WipStatus:
+    """A status used by workers indicating if they  are busy."""
     def __init__(self):
         self.working = False
 
 
 def do_requests(wip_status: WipStatus):
     """
+    request_workers' work.
     Takes tasks from request_tasks_q, requests what is said in it, puts a
-    HandleResponseTask in the handle_response_tasks_q once it's done. Repeats.
-    :param wip_status:
-    :return:
+    HandleResponseTask in the do_tasks_q once it's done. Repeats.
+    :param wip_status: worker's business status.
     """
     while True:
         # Prevent queue changing.
@@ -201,7 +239,7 @@ def do_requests(wip_status: WipStatus):
         rq_task = request_tasks.get()
         wip_status.working = True
         new_work_or_done.release()
-        rq_task.set_response()
+        rq_task.do_request()
         handle_response_tasks.put(rq_task)
         wip_status.working = False
 
@@ -263,7 +301,7 @@ def generate_credits(num_simul_requests, no_cache):
     done = False
     while not done:
         task = handle_response_tasks.get()
-        task.do()
+        task.handle_response()
         # Hey, I see there's mo more works in the queue for y'all to take.
         if request_tasks.empty():
             # Are you guys done?
@@ -324,7 +362,6 @@ def generate_credits(num_simul_requests, no_cache):
         'headerDate': time.strftime('%Y-%m-%d, %X +0000', time.gmtime()),
         'footerDate': time.strftime('%A, %B %d %Y, %X UTC', time.gmtime()),
     }
-    # TODO use the 'arrow' module for date and time? Necessary?
     template_file = open(CREDITS_TEMPLATE_FILE, 'r')
     credits_page_file = open(CREDITS_PAGE, 'w', encoding='utf-8')
     credits_page_file.write(pystache.render(template_file.read(), context))
