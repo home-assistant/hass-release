@@ -1,9 +1,10 @@
 import os
 import re
+import subprocess
 
 import click
 
-from . import git, github, changelog, model
+from . import git, github, changelog, model, repo_hass, repo_polymer
 from .const import LABEL_CHERRY_PICKED
 from .util import copy_clipboard
 
@@ -150,3 +151,11 @@ def unmerged_docs(branch, release):
         print(pr.title)
         print(docs_pr.html_url)
         print()
+
+
+@cli.command(help='Bump frontend in hass.')
+def bump_frontend():
+    frontend = repo_polymer.get_version()
+    repo_hass.update_frontend_version(frontend)
+    repo_hass.gen_requirements_all()
+    repo_hass.commit_all(f"Updated frontend to {frontend}")
