@@ -1,5 +1,5 @@
 from .const import GITHUB_ORGANIZATION_NAME
-from threading import Thread, Condition
+import threading
 from .github import MyGitHub
 from .const import TOKEN_FILE, LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE,\
     CREDITS_TEMPLATE_FILE, CREDITS_PAGE
@@ -12,15 +12,19 @@ import time
 import re
 
 
+# TODO rewrite globals using partial?
 # Dict structure:
 # {
-#     <repository_name>: {
-#         <user_login>: <num_contributions_to_this_repo>
+#     <user_login>: {
+#         <repo_name>: <num_contributions_to_this_repo>,
+#         <other_repo_name>: <num_contributions_to_other_repo>
+#         ...
+#     },
+#     <other_user_login>: {
 #         ...
 #     }
 #     ...
 # }
-# TODO rewrite globals using partial?
 org_contributors_dict = defaultdict(dict)
 name_by_login = {}
 login_by_email = {}
@@ -198,7 +202,7 @@ class HandleAnonTask(RequestTask):
             name_by_login[login] = user_name
 
 
-class RequestsWorker(Thread):
+class RequestsWorker(threading.Thread):
     def run(self):
         time_to_retire = False
         while not time_to_retire:
