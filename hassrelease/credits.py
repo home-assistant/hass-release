@@ -24,11 +24,7 @@ import re
 org_contributors_dict = defaultdict(dict)
 name_by_login = {}
 login_by_email = {}
-request_tasks = Queue()  # Elements' type - RequestTask.
-handle_response_tasks = Queue()  # Elements' type - HandleResponseTask
-# Used to tell request_workers that there's a new request work to do. Or
-# if there's not gonna be any more.
-new_work_or_done = Condition()
+requests_tasks = Queue()  # Elements' type - RequestTask.
 gh = None
 default_per_page = 100
 
@@ -41,7 +37,7 @@ class RequestTask:
     1. Access GitHub API to get corresponding data.
     2. Handle obtained data.
     """
-    def __init__(self, url: str, params: dict=None):
+    def __init__(self, url: str, **params):
         """
         :param url: API URL to be requested.
         :param params: Request's query string parameters.
@@ -50,14 +46,9 @@ class RequestTask:
         self.params = params
         self.response = None
 
-    def do_request(self):
-        """Action #1. Access GitHub API."""
+    def handle(self):
+        # Get data from the API.
         self.response = gh.request_with_retry(self.url, self.params)
-
-    def handle_response(self):
-        """Action #2. Handle the response."""
-        assert self.response is not None
-        pass
 
     def __repr__(self):
         return '{}\tresp: {}\turl:{}\tparams: {}'\
@@ -66,44 +57,38 @@ class RequestTask:
                     self.url, self.params)
 
 
-def enqueue_request_task_and_notify_worker(task: RequestTask):
-    with new_work_or_done:
-        request_tasks.put(task)
-        new_work_or_done.notify()
-
-
 class ReposPageTask(RequestTask):
-    def handle_response(self):
+    def __init__(self, repos_page_url: str, **params):
+        super(ReposPageTask, self).__init__(repos_page_url, **params)
+
+    def handle(self):
         """
         For each repo enqueue a ContributorsPageTask. If this repos page
         is not the last, enqueue an additional ReposPageTask for the next page.
         """
-        super(ReposPageTask, self).handle_response()
+        super(ReposPageTask, self).handle()
         next_page_url_dict = self.response.links.get('next')
         if next_page_url_dict is not None:
             next_page_url = next_page_url_dict['url']
             new_task = ReposPageTask(next_page_url)
-            enqueue_request_task_and_notify_worker(new_task)
+            requests_tasks.put(new_task)
         for repo in self.response.json():
             new_task = ContributorsPageTask(repo['contributors_url'],
                                             repo,
-                                            params={
-                                                'anon': 'true',
-                                                'per_page': str(
-                                                    default_per_page)
-                                            })
-            enqueue_request_task_and_notify_worker(new_task)
+                                            anon='true',
+                                            per_page=str(default_per_page))
+            requests_tasks.put(new_task)
 
 
 class ContributorsPageTask(RequestTask):
-    def __init__(self, url: str, repo: dict, params: dict=None):
+    def __init__(self, contributors_page_url: str, repo: dict, **params):
         """
         :param repo: The repository, whose contributors are to process.
         """
-        super().__init__(url, params)
+        super().__init__(contributors_page_url, **params)
         self.repo = repo
 
-    def handle_response(self):
+    def handle(self):
         """Process contributors, list them in the org_contributors_dict. If
         this contributors page is not the last, enqueue a new
         ContributorsPageTask for the next page.
@@ -125,18 +110,18 @@ class ContributorsPageTask(RequestTask):
         contributions this user made, and further in the list we may
         find anonymous entries, which must be also associated with this user.
         """
-        super(ContributorsPageTask, self).handle_response()
+        super(ContributorsPageTask, self).handle()
         next_page_url_dict = self.response.links.get('next')
         if next_page_url_dict is not None:
             next_page_url = next_page_url_dict['url']
             new_task = ContributorsPageTask(next_page_url, self.repo)
-            enqueue_request_task_and_notify_worker(new_task)
+            requests_tasks.put(new_task)
         for contr in self.response.json():
             if contr['type'] == 'User':
                 if contr['login'] not in name_by_login:
                     # Requesting contributor's profile page to know his name.
-                    new_task = ResolveNameByLoginTask(contr['url'])
-                    enqueue_request_task_and_notify_worker(new_task)
+                    new_task = ResolveNameByProfile(contr['url'])
+                    requests_tasks.put(new_task)
                 org_contributors_dict[contr['login']][self.repo['name']] = \
                     contr['contributions']
             # contr['type'] == 'Anonymous'
@@ -152,12 +137,8 @@ class ContributorsPageTask(RequestTask):
                     # Removing the last 6.
                     commits_url = self.repo['commits_url'][:-6]
                     # Get contributor's login and name by a commit he made.
-                    new_task = HandleAnonTask(commits_url, contr, self.repo,
-                                              params={
-                                                  'author': contr['email'],
-                                                  'per_page': '1'
-                                              })
-                    enqueue_request_task_and_notify_worker(new_task)
+                    new_task = HandleAnonTask(commits_url, contr, self.repo)
+                    requests_tasks.put(new_task)
                 else:
                     contributions_already = \
                         org_contributors_dict[login].get(self.repo['name'])
@@ -169,14 +150,17 @@ class ContributorsPageTask(RequestTask):
                             contr['contributions']
 
 
-class ResolveNameByLoginTask(RequestTask):
+class ResolveNameByProfile(RequestTask):
     """A task to get user's name by accessing his GitHub profile."""
-    def handle_response(self):
+    def __init__(self, profile_url):
+        super(ResolveNameByProfile, self).__init__(profile_url)
+
+    def handle(self):
         """
         Add user's name to the name_by_login dict. If the user has not
         specified his name, use the login as the name.
         """
-        super(ResolveNameByLoginTask, self).handle_response()
+        super(ResolveNameByProfile, self).handle()
         user = self.response.json()
         # If the user has not specified the name, use his login
         name_by_login[user['login']] = user['name'] or user['login']
@@ -184,18 +168,18 @@ class ResolveNameByLoginTask(RequestTask):
 
 class HandleAnonTask(RequestTask):
     """A task to handle an anonymous contributor entry."""
-    def __init__(self, url: str, contributor: dict, repo: dict,
-                 params: dict=None):
-        super().__init__(url, params)
+    def __init__(self, repo_commits_url: str, contributor: dict, repo: dict):
+        super().__init__(repo_commits_url, author=contributor['email'],
+                         per_page=1)
         self.contributor = contributor
         self.repo = repo
 
-    def handle_response(self):
+    def handle(self):
         """
         Add the contributor to the org_contributors_dict, if the user
-        information can be retrieved, do nothing otherwise.
+        information can be retrieved, handle nothing otherwise.
         """
-        super(HandleAnonTask, self).handle_response()
+        super(HandleAnonTask, self).handle()
         commit = self.response.json()[0]
         # Check whether the email is linked to a GitHub profile.
         if commit['author'] is not None:
@@ -214,35 +198,18 @@ class HandleAnonTask(RequestTask):
             name_by_login[login] = user_name
 
 
-class WipStatus:
-    """A status used by workers indicating if they  are busy."""
-    def __init__(self):
-        self.working = False
-
-
-def do_requests(wip_status: WipStatus):
-    """
-    request_workers' work.
-    Takes tasks from request_tasks_q, requests what is said in it, puts a
-    HandleResponseTask in the do_tasks_q once it's done. Repeats.
-    :param wip_status: worker's business status.
-    """
-    while True:
-        # Prevent queue changing.
-        new_work_or_done.acquire()
-        if request_tasks.empty():
-            new_work_or_done.wait()
-            if request_tasks.empty():
-                # The thread is waken up, but there's no work.
-                # This means that we're done.
-                new_work_or_done.release()
-                break
-        rq_task = request_tasks.get()
-        wip_status.working = True
-        new_work_or_done.release()
-        rq_task.do_request()
-        handle_response_tasks.put(rq_task)
-        wip_status.working = False
+class RequestsWorker(Thread):
+    def run(self):
+        time_to_retire = False
+        while not time_to_retire:
+            task = requests_tasks.get()
+            # A None element will be put to the queue when the worker needs
+            # to be terminated.
+            if task is not None:
+                task.handle()
+            else:
+                time_to_retire = True
+            requests_tasks.task_done()
 
 
 def generate_credits(num_simul_requests, no_cache):
@@ -282,13 +249,8 @@ def generate_credits(num_simul_requests, no_cache):
           .format(resp.reason, resp.json().get('message'),
                   resp.headers.get(MyGitHub.RATELIMIT_REMAINING_STR)))
     request_workers = []
-    # A lock is associated with each worker. It is locked if the worker is
-    # working, not waiting for a task.
-    wip_statuses = []
     for _ in range(0, num_simul_requests):
-        new_wip_status = WipStatus()
-        wip_statuses.append(new_wip_status)
-        new_thread = Thread(target=do_requests, args=(new_wip_status,))
+        new_thread = RequestsWorker()
         new_thread.start()
         request_workers.append(new_thread)
     org_repos_url = '{}/orgs/{}/repos'.format(MyGitHub.ENDPOINT,
@@ -297,25 +259,11 @@ def generate_credits(num_simul_requests, no_cache):
         'type': 'public',
         'per_page': str(default_per_page)
     })
-    enqueue_request_task_and_notify_worker(new_task)
-
-    done = False
-    while not done:
-        task = handle_response_tasks.get()
-        task.handle_response()
-        # Hey, I see there's mo more works in the queue for y'all to take.
-        if request_tasks.empty():
-            # Are you guys done?
-            for wip_status in wip_statuses:
-                if wip_status.working:
-                    # Oh ok. I'm gonna wait for you to finish.
-                    break
-            else:
-                done = True
-                with new_work_or_done:
-                    # Wake every worker up while the request_tasks queue is
-                    # empty. They will see this and will terminate.
-                    new_work_or_done.notify_all()
+    requests_tasks.put(new_task)
+    requests_tasks.join()
+    # Poisoning workers
+    for _ in request_workers:
+        requests_tasks.put(None)
     for worker in request_workers:
         worker.join()
     with open(NAME_BY_LOGIN_FILE, 'w', encoding='utf-8') as f:
