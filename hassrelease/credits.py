@@ -216,7 +216,24 @@ class RequestsWorker(threading.Thread):
             requests_tasks.task_done()
 
 
-def generate_credits(num_simul_requests, no_cache):
+class ProgressReporter(threading.Thread):
+    """
+    A Thread subclass used to monitor the execution progress.
+    """
+    def __init__(self, stop_monitoring: threading.Event,
+                 report_period: float=5):
+        super(ProgressReporter, self).__init__()
+        self.stop_monitoring = stop_monitoring
+        self.report_period = report_period
+
+    def run(self):
+        # Report every self.report_period seconds until the event is triggered.
+        while not self.stop_monitoring.wait(self.report_period):
+            print('name_by_login len: {}. org_contributors_dict len: {}'
+                  .format(len(name_by_login), len(org_contributors_dict)))
+
+
+def generate_credits(num_simul_requests, no_cache, quiet):
     # Authenticate to GitHub. It is possible to receive required data as an
     # anonymous user.
     global gh
@@ -228,6 +245,7 @@ def generate_credits(num_simul_requests, no_cache):
         sys.stderr.write('Could not open the .token file')
         print('Retrieving the data anonymously')
         gh = MyGitHub(token=None)
+    gh.quiet = quiet
     global login_by_email
     global name_by_login
     if not no_cache:
@@ -264,6 +282,11 @@ def generate_credits(num_simul_requests, no_cache):
         'per_page': str(default_per_page)
     })
     requests_tasks.put(new_task)
+    # RequestWorkers start working.
+    if not quiet:
+        all_done = threading.Event()
+        reporter = ProgressReporter(all_done)
+        reporter.start()
     requests_tasks.join()
     # Poisoning workers
     for _ in request_workers:
@@ -320,3 +343,6 @@ def generate_credits(num_simul_requests, no_cache):
     credits_page_file.write(pystache.render(template_file.read(), context))
     template_file.close()
     credits_page_file.close()
+    if not quiet:
+        all_done.set()
+        reporter.join()

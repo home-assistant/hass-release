@@ -162,8 +162,9 @@ def unmerged_docs(branch, release):
 @click.option('-c', '--no-cache', is_flag=True,
               help='Do not use the locally cached name-by-login and '
                    'login-by-email files')
-def credits(simul_requests, no_cache):
-    credits_module.generate_credits(simul_requests, no_cache)
+@click.option('-q', '--quiet', is_flag=True, help='Suppress console logging')
+def credits(simul_requests, no_cache, quiet):
+    credits_module.generate_credits(simul_requests, no_cache, quiet)
 
 
 @cli.command(help='Bump frontend in hass.')
@@ -172,4 +173,3 @@ def bump_frontend():
     repo_hass.update_frontend_version(frontend)
     repo_hass.gen_requirements_all()
     repo_hass.commit_all(f"Updated frontend to {frontend}")
-

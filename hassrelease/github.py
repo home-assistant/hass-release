@@ -70,8 +70,9 @@ class MyGitHub:
     RATELIMIT_RESET_STR = 'X-RateLimit-Reset'
     RETRY_AFTER_STR = 'Retry-After'
 
-    def __init__(self, token: str=None):
+    def __init__(self, token: str=None, quiet: bool=False):
         # The time when the GitHub API is going to be available.
+        self.quiet = quiet
         self.next_time_available = 0
         self.last_logged_next_time_available = self.next_time_available
         self.headers = {
@@ -105,7 +106,8 @@ class MyGitHub:
         while True:
             available_after = self.next_time_available - int(time.time())
             if available_after > 0:
-                self.log_timeout(available_after)
+                if not self.quiet:
+                    self.log_timeout(available_after)
                 time.sleep(available_after)
             # The API must be available at that point
             try:
