@@ -88,8 +88,9 @@ class ReposPageTask(RequestTask):
             new_task = ContributorsPageTask(repo['contributors_url'],
                                             repo,
                                             params={
-                                                'anon': True,
-                                                'per_page': default_per_page
+                                                'anon': 'true',
+                                                'per_page': str(
+                                                    default_per_page)
                                             })
             enqueue_request_task_and_notify_worker(new_task)
 
@@ -154,7 +155,7 @@ class ContributorsPageTask(RequestTask):
                     new_task = HandleAnonTask(commits_url, contr, self.repo,
                                               params={
                                                   'author': contr['email'],
-                                                  'per_page': 1
+                                                  'per_page': '1'
                                               })
                     enqueue_request_task_and_notify_worker(new_task)
                 else:
@@ -294,7 +295,7 @@ def generate_credits(num_simul_requests, no_cache):
                                               GITHUB_ORGANIZATION_NAME)
     new_task = ReposPageTask(org_repos_url, params={
         'type': 'public',
-        'per_page': default_per_page
+        'per_page': str(default_per_page)
     })
     enqueue_request_task_and_notify_worker(new_task)
 
