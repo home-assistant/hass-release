@@ -112,7 +112,7 @@ class MyGitHub:
                 resp = requests.get(url, params, headers=self.headers)
             except requests.exceptions.ConnectionError as err:
                 print('A ConnectionError was caught. Retrying. Error: {}'
-                      .format(err.request.url, err))
+                      .format(err))
                 continue
             # If forbidden (may be because of rate-limit timeout.  If so,
             # we'll wait and then retry).
