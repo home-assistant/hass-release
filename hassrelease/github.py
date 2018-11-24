@@ -108,8 +108,12 @@ class MyGitHub:
                 self.log_timeout(available_after)
                 time.sleep(available_after)
             # The API must be available at that point
-            resp = requests.get(url=url, params=params,
-                                headers=self.headers)
+            try:
+                resp = requests.get(url, params, headers=self.headers)
+            except requests.exceptions.ConnectionError as err:
+                print('A ConnectionError was caught. Retrying. Error: {}'
+                      .format(err.request.url, err))
+                continue
             # If forbidden (may be because of rate-limit timeout.  If so,
             # we'll wait and then retry).
             if resp.status_code == 403:
