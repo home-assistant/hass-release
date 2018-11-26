@@ -47,10 +47,19 @@ def release_notes(branch, force_update, release):
 
 
 @cli.command(help='Cherry pick all merged PRs into the current branch.')
-@click.option('--remote-repository', default='home-assistant')
-@click.option('--local-repository', default='../home-assistant')
+@click.argument('repo', default='hass', type=click.Choice([
+    'hass', 'docs', 'frontend', 'd', 'f'
+]))
 @click.option('--milestone', default=None)
-def milestone_cherry_pick(remote_repository, local_repository, milestone):
+def pick(repo, milestone):
+    if repo == 'hass':
+        remote_repository = 'home-assistant'
+    elif repo in ('f', 'frontend'):
+        remote_repository = 'home-assistant-polymer'
+    elif repo in ('d', 'docs'):
+        remote_repository = 'home-assistant.io'
+
+    local_repository = f"../{remote_repository}"
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', remote_repository)
 
@@ -159,3 +168,11 @@ def bump_frontend():
     repo_hass.update_frontend_version(frontend)
     repo_hass.gen_requirements_all()
     repo_hass.commit_all(f"Updated frontend to {frontend}")
+
+
+@cli.command(help='Create new release post.')
+def create_release_notes():
+    # Create new file in io with correct date
+    # Update _config.yml
+    # Generate release notes and insert
+    pass
