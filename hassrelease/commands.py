@@ -59,6 +59,8 @@ def pick(repo, milestone):
     elif repo in ('d', 'docs'):
         remote_repository = 'home-assistant.io'
 
+    print("Repository", remote_repository)
+
     local_repository = f"../{remote_repository}"
     gh_session = github.get_session()
     repo = gh_session.repository('home-assistant', remote_repository)
@@ -69,7 +71,7 @@ def pick(repo, milestone):
     else:
         gh_milestone = github.get_milestone_by_title(repo, milestone)
 
-    git.fetch()
+    git.fetch(local_repository)
 
     to_pick = []
 

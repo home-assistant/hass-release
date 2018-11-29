@@ -52,11 +52,11 @@ def get_log(branch):
         yield line
 
 
-def fetch():
+def fetch(repo):
     process = subprocess.run(
         "git fetch",
         shell=True,
-        cwd='../home-assistant'
+        cwd=repo
     )
 
     if process.returncode != 0:
