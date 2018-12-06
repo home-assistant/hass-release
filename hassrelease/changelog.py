@@ -2,6 +2,8 @@ from collections import OrderedDict
 from datetime import datetime
 from distutils.version import StrictVersion
 
+import click
+
 INFO_TEMPLATE = '([@{0}] - [#{1}])'
 PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
@@ -102,48 +104,49 @@ def generate(release, prs, *, website_tags):
 
     changes = []
     links = set()
-    for line in release.log_lines():
-        parts = ['-', line.message]
+    with click.progressbar(release.log_lines(), label="Changelog") as bar:
+        for line in bar:
+            parts = ['-', line.message]
 
-        # Filter out git commits that are not merge commits
-        if line.pr is None:
-            continue
-
-        pr = prs.get(line.pr)
-
-        if (pr.milestone is not None and
-            StrictVersion(pr.milestone.title).version !=
-                release.version.version):  # Ignore beta version tag
-            continue
-
-        labels = [label.name for label in pr.labels()]
-
-        # Filter out commits for which the PR has one of the ignored labels
-        if any(label in IGNORE_LINE_LABELS for label in labels):
-            continue
-
-        user = pr.user
-        links.add(LINK_DEF_USER.format(user.login, user.html_url))
-        parts.append(INFO_TEMPLATE.format(user.login, pr.number))
-        links.add(LINK_DEF_PR.format(pr.number, pr.html_url))
-
-        for label in labels:
-            _process_doc_label(label, parts, links, website_tags)
-
-        for label in labels:
-            if label in label_groups:
-                if label == 'cherry-picked':
-                    parts.append("(beta fix)")
-                else:
-                    parts.append("({})".format(label))
-
-        msg = ' '.join(parts)
-        changes.append(msg)
-
-        for label in labels:
-            if label not in label_groups:
+            # Filter out git commits that are not merge commits
+            if line.pr is None:
                 continue
-            label_groups[label].append(msg)
+
+            pr = prs.get(line.pr)
+    
+            if (pr.milestone is not None and
+                StrictVersion(pr.milestone.title).version !=
+                    release.version.version):  # Ignore beta version tag
+                continue
+
+            labels = [label.name for label in pr.labels()]
+
+            # Filter out commits for which the PR has one of the ignored labels
+            if any(label in IGNORE_LINE_LABELS for label in labels):
+                continue
+
+            user = pr.user
+            links.add(LINK_DEF_USER.format(user.login, user.html_url))
+            parts.append(INFO_TEMPLATE.format(user.login, pr.number))
+            links.add(LINK_DEF_PR.format(pr.number, pr.html_url))
+
+            for label in labels:
+                _process_doc_label(label, parts, links, website_tags)
+
+            for label in labels:
+                if label in label_groups:
+                    if label == 'cherry-picked':
+                        parts.append("(beta fix)")
+                    else:
+                        parts.append("({})".format(label))
+
+            msg = ' '.join(parts)
+            changes.append(msg)
+
+            for label in labels:
+                if label not in label_groups:
+                    continue
+                label_groups[label].append(msg)
 
     outp = []
 
