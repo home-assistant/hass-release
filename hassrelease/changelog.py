@@ -1,15 +1,12 @@
 from collections import OrderedDict
 from datetime import datetime
 from distutils.version import StrictVersion
-import sys
-
-from .users import update_users_with_release
 
 INFO_TEMPLATE = '([@{0}] - [#{1}])'
 PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
-LINK_DEF_USER = '[@{0}]: https://github.com/{0}'
-LINK_DEF_PR = '[#{0}]: https://github.com/home-assistant/home-assistant/pull/{0}'
+LINK_DEF_USER = '[@{0}]: {1}'
+LINK_DEF_PR = '[#{0}]: {1}'
 GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/'
 LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
 DOCS_LABELS = set(['platform: ', 'component: '])
@@ -95,8 +92,6 @@ def generate(release, prs, *, website_tags):
 
     website_tags: boolean if we should include tags for home-assistant.io
     """
-    users = update_users_with_release(release, prs)
-
     label_groups = OrderedDict()
     label_groups['new-platform'] = []
     label_groups['new-feature'] = []
@@ -108,12 +103,7 @@ def generate(release, prs, *, website_tags):
     changes = []
     links = set()
     for line in release.log_lines():
-        labels = []
         parts = ['-', line.message]
-
-        if line.email not in users:
-            print('Error! Found unresolved user', line.email)
-            sys.exit(1)
 
         # Filter out git commits that are not merge commits
         if line.pr is None:
@@ -132,9 +122,10 @@ def generate(release, prs, *, website_tags):
         if any(label in IGNORE_LINE_LABELS for label in labels):
             continue
 
-        links.add(LINK_DEF_USER.format(users[line.email]))
-        parts.append(INFO_TEMPLATE.format(users[line.email], line.pr))
-        links.add(LINK_DEF_PR.format(line.pr))
+        user = pr.user
+        links.add(LINK_DEF_USER.format(user.login, user.html_url))
+        parts.append(INFO_TEMPLATE.format(user.login, pr.number))
+        links.add(LINK_DEF_PR.format(pr.number, pr.html_url))
 
         for label in labels:
             _process_doc_label(label, parts, links, website_tags)
