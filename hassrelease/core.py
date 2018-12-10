@@ -1,0 +1,3 @@
+
+class HassReleaseError(Exception):
+    pass
