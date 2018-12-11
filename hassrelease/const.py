@@ -1,8 +1,8 @@
 TOKEN_FILE = '.token'
-LOGIN_BY_EMAIL_FILE = 'data/users.csv'
+# TODO replace with a single file with 3 columns?
+LOGIN_BY_EMAIL_FILE = 'data/login_by_email.csv'
 NAME_BY_LOGIN_FILE = 'data/name_by_login.csv'
 NOTES_FILE = 'notes.txt'
-GH_NO_EMAIL_SUFFIX = '@users.noreply.github.com'
 LABEL_CHERRY_PICKED = 'cherry-picked'
 GITHUB_ORGANIZATION_NAME = 'home-assistant'
 CREDITS_TEMPLATE_FILE = 'hassrelease/credits.mustache'

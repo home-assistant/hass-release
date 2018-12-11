@@ -3,7 +3,6 @@ import threading
 from .github import MyGitHub
 from .const import TOKEN_FILE, LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE,\
     CREDITS_TEMPLATE_FILE, CREDITS_PAGE
-from .users import read_csv_to_dict
 import sys
 from queue import Queue
 from collections import defaultdict
@@ -248,6 +247,16 @@ def generate_credits(num_simul_requests, no_cache, quiet):
     gh.quiet = quiet
     global login_by_email
     global name_by_login
+
+    def read_csv_to_dict(filename: str, encoding: str = None):
+        data = {}
+        with open(filename, encoding=encoding) as inp:
+            for lin in inp:
+                if ',' not in lin:
+                    lin = lin.strip() + ','
+                key, value = [val.strip() for val in lin.split(',')]
+                data[key] = value
+        return data
     if not no_cache:
         try:
             login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
