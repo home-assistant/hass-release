@@ -1,3 +1,4 @@
+"""Constants for the Home Assistant release helper tool."""
 TOKEN_FILE = '.token'
 # TODO replace with a single file with 3 columns?
 LOGIN_BY_EMAIL_FILE = 'data/login_by_email.csv'
