@@ -17,4 +17,3 @@ def get_version():
         raise ValueError('Unable to detect version')
 
     return found.split('"')[-2]
-

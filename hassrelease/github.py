@@ -1,13 +1,13 @@
-from distutils.version import StrictVersion
 import os
 import time
-import requests
+from distutils.version import StrictVersion
 
+import requests
 from github3 import GitHub
 from github3.exceptions import GitHubError
 
-from .core import HassReleaseError
 from .const import TOKEN_FILE
+from .core import HassReleaseError
 
 
 def get_session():

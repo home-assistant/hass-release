@@ -4,8 +4,9 @@ import subprocess
 
 import click
 
-from . import git, github, changelog, model, repo_hass, repo_polymer
+from . import changelog
 from . import credits as credits_module
+from . import git, github, model, repo_hass, repo_polymer
 from .const import LABEL_CHERRY_PICKED
 from .util import copy_clipboard
 
