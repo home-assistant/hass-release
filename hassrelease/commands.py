@@ -5,6 +5,7 @@ import subprocess
 import click
 
 from . import git, github, changelog, model, repo_hass, repo_polymer
+from . import credits as credits_module
 from .const import LABEL_CHERRY_PICKED
 from .util import copy_clipboard
 
@@ -162,6 +163,19 @@ def unmerged_docs(branch, release):
         print(pr.title)
         print(docs_pr.html_url)
         print()
+
+
+@cli.command(help='Generate credits page'
+                  ' (../home-assistant.io/source/developers/credits.markdown)')
+@click.option('-r', '--simul-requests', default=63, type=click.IntRange(min=1),
+              show_default=True, help='Defines how many API requests can be '
+                                      'performed simultaneously')
+@click.option('-c', '--no-cache', is_flag=True,
+              help='Do not use the locally cached name-by-login and '
+                   'login-by-email files')
+@click.option('-q', '--quiet', is_flag=True, help='Suppress console logging')
+def credits(simul_requests, no_cache, quiet):
+    credits_module.generate_credits(simul_requests, no_cache, quiet)
 
 
 @cli.command(help='Bump frontend in hass.')
