@@ -1,15 +1,17 @@
-from .const import GITHUB_ORGANIZATION_NAME
-import threading
-from .github import MyGitHub
-from .const import TOKEN_FILE, LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE,\
-    CREDITS_TEMPLATE_FILE, CREDITS_PAGE
-import sys
-from queue import Queue
-from collections import defaultdict
-import pystache
-import time
+"""Create the credits page for home-assistant.io."""
 import re
+import sys
+import threading
+import time
+from collections import defaultdict
+from queue import Queue
 
+import pystache
+
+from .const import (
+    CREDITS_PAGE, CREDITS_TEMPLATE_FILE, GITHUB_ORGANIZATION_NAME,
+    LOGIN_BY_EMAIL_FILE, NAME_BY_LOGIN_FILE, TOKEN_FILE)
+from .github import MyGitHub
 
 # TODO rewrite globals using partial?
 # Dict structure:
@@ -50,10 +52,11 @@ class RequestTask:
         self.response = None
 
     def handle(self):
-        # Get data from the API.
+        """Get data from the API."""
         self.response = gh.request_with_retry(self.url, self.params)
 
     def __repr__(self):
+        """Represent the data."""
         return '{}\tresp: {}\turl:{}\tparams: {}'\
             .format(str(self.__class__).split('.')[-1][:-2],
                     'yes' if self.response is not None else 'None',
@@ -61,7 +64,10 @@ class RequestTask:
 
 
 class ReposPageTask(RequestTask):
+    """A thread subclass to handle the repositories page."""
+
     def __init__(self, repos_page_url: str, **params):
+        """Initialize the task."""
         super(ReposPageTask, self).__init__(repos_page_url, **params)
 
     def handle(self):
@@ -76,24 +82,24 @@ class ReposPageTask(RequestTask):
             new_task = ReposPageTask(next_page_url)
             requests_tasks.put(new_task)
         for repo in self.response.json():
-            new_task = ContributorsPageTask(repo['contributors_url'],
-                                            repo,
-                                            anon='true',
-                                            per_page=str(default_per_page))
+            new_task = ContributorsPageTask(
+                repo['contributors_url'], repo, anon='true',
+                per_page=str(default_per_page))
             requests_tasks.put(new_task)
 
 
 class ContributorsPageTask(RequestTask):
+    """A thread subclass to handle the contributors pages."""
+
     def __init__(self, contributors_page_url: str, repo: dict, **params):
-        """
-        :param repo: The repository, whose contributors are to process.
-        """
+        """Initialize the task."""
         super().__init__(contributors_page_url, **params)
         self.repo = repo
 
     def handle(self):
-        """Process contributors, list them in the org_contributors_dict. If
-        this contributors page is not the last, enqueue a new
+        """Process contributors, list them in the org_contributors_dict.
+
+        If this contributors page is not the last, enqueue a new
         ContributorsPageTask for the next page.
         """
         """
@@ -155,7 +161,9 @@ class ContributorsPageTask(RequestTask):
 
 class ResolveNameByProfile(RequestTask):
     """A task to get user's name by accessing his GitHub profile."""
+
     def __init__(self, profile_url):
+        """Initialize the resolver."""
         super(ResolveNameByProfile, self).__init__(profile_url)
 
     def handle(self):
@@ -202,7 +210,10 @@ class HandleAnonTask(RequestTask):
 
 
 class RequestsWorker(threading.Thread):
+    """A thread subclass to handle the requests."""
+
     def run(self):
+        """Run the requests worker."""
         time_to_retire = False
         while not time_to_retire:
             task = requests_tasks.get()
@@ -216,16 +227,17 @@ class RequestsWorker(threading.Thread):
 
 
 class ProgressReporter(threading.Thread):
-    """
-    A Thread subclass used to monitor the execution progress.
-    """
+    """A thread subclass used to monitor the execution progress."""
+
     def __init__(self, stop_monitoring: threading.Event,
                  report_period: float=5):
+        """Initialize the reporter"""
         super(ProgressReporter, self).__init__()
         self.stop_monitoring = stop_monitoring
         self.report_period = report_period
 
     def run(self):
+        """Run the progress reporter."""
         # Report every self.report_period seconds until the event is triggered.
         while not self.stop_monitoring.wait(self.report_period):
             print('name_by_login len: {}. org_contributors_dict len: {}'
@@ -233,8 +245,7 @@ class ProgressReporter(threading.Thread):
 
 
 def generate_credits(num_simul_requests, no_cache, quiet):
-    # Authenticate to GitHub. It is possible to receive required data as an
-    # anonymous user.
+    """Authenticate to GitHub and collects the credits data."""
     global gh
     try:
         with open(TOKEN_FILE) as token_file:
@@ -249,6 +260,7 @@ def generate_credits(num_simul_requests, no_cache, quiet):
     global name_by_login
 
     def read_csv_to_dict(filename: str, encoding: str = None):
+        """Read the CSV data into a dict."""
         data = {}
         with open(filename, encoding=encoding) as inp:
             for lin in inp:
@@ -262,30 +274,31 @@ def generate_credits(num_simul_requests, no_cache, quiet):
             login_by_email = read_csv_to_dict(LOGIN_BY_EMAIL_FILE)
         except OSError:
             print('Could not read the login-by-email file. Proceeding without '
-                  'the cache.')
+                  'the cache')
             login_by_email = {}
         try:
-            name_by_login = read_csv_to_dict(NAME_BY_LOGIN_FILE,
-                                             encoding='utf-8')
+            name_by_login = read_csv_to_dict(
+                NAME_BY_LOGIN_FILE, encoding='utf-8')
         except OSError:
             print('Could not read the name-by-login file. Proceeding without '
-                  'the cache.')
+                  'the cache')
             name_by_login = {}
     else:
         login_by_email = {}
         name_by_login = {}
-    # Test the API.
+    # Test the API
     resp = gh.request_with_retry(MyGitHub.ENDPOINT)
     print('Status: {}. Message: {}. Rate-Limit remaining: {}'
           .format(resp.reason, resp.json().get('message'),
                   resp.headers.get(MyGitHub.RATELIMIT_REMAINING_STR)))
     request_workers = []
+
     for _ in range(0, num_simul_requests):
         new_thread = RequestsWorker()
         new_thread.start()
         request_workers.append(new_thread)
-    org_repos_url = '{}/orgs/{}/repos'.format(MyGitHub.ENDPOINT,
-                                              GITHUB_ORGANIZATION_NAME)
+    org_repos_url = '{}/orgs/{}/repos'.format(
+        MyGitHub.ENDPOINT, GITHUB_ORGANIZATION_NAME)
     new_task = ReposPageTask(org_repos_url, params={
         'type': 'public',
         'per_page': str(default_per_page)
@@ -314,15 +327,14 @@ def generate_credits(num_simul_requests, no_cache, quiet):
     for login, user_contribs_dict in org_contributors_dict.items():
         count_string = ''
         user_total_contribs = 0
-        for repo_name, num_contribs in sorted(user_contribs_dict.items(),
-                                              key=lambda x: x[1],
-                                              reverse=True):
-            count_string += '{} {} to {}\n'.format(num_contribs,
-                'commits' if num_contribs > 1 else 'commit', repo_name)
+        for repo_name, num_contribs in sorted(
+                user_contribs_dict.items(), key=lambda x: x[1], reverse=True):
+            count_string += '{} {} to {}\n'.format(
+                num_contribs, 'commits' if num_contribs > 1 else 'commit',
+                repo_name)
             user_total_contribs += num_contribs
-        count_string = '{} total commits to the home-assistant ' \
-                       'organization:\n{}'.format(user_total_contribs,
-                                                  count_string)
+        count_string = '{} total commits to the Home Assistant orga:\n{}'\
+            .format(user_total_contribs, count_string)
         # TODO if the login_by_email file contains some users that
         # name_by_login file does not contain, (for example if it was modified
         # by 'hassrelease release-notes' run), a KeyError will occur here.
@@ -339,11 +351,11 @@ def generate_credits(num_simul_requests, no_cache, quiet):
             },
             'countString': count_string
         }
-    fearlessLeader = users_context.pop('balloob')
+    fearless_leader = users_context.pop('balloob')
     context = {
         'allUsers': sorted(users_context.values(),
                            key=lambda x: x['info']['name'].casefold()),
-        'fearlessLeader': fearlessLeader,
+        'fearlessLeader': fearless_leader,
         'headerDate': time.strftime('%Y-%m-%d, %X +0000', time.gmtime()),
         'footerDate': time.strftime('%A, %B %d %Y, %X UTC', time.gmtime()),
     }
