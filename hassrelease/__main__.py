@@ -1,7 +1,7 @@
 import click
 
-from .core import HassReleaseError
 from .commands import cli
+from .core import HassReleaseError
 
 
 def main(*args):
