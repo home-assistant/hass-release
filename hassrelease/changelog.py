@@ -9,7 +9,6 @@ LINK_DEF_USER = '[@{0}]: {1}'
 LINK_DEF_PR = '[#{0}]: {1}'
 GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/'
 LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
-DOCS_LABELS = set(['platform: ', 'component: '])
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-platform': 'New Platforms',
@@ -60,10 +59,9 @@ def _process_doc_label(label, parts, links, website_tags):
     """Process doc labels."""
     item = None
 
-    for doc_label in DOCS_LABELS:
-        if label.startswith(doc_label):
-            item = label[len(doc_label):]
-            break
+    if label.startswith('integration: '):
+        item = label[len('integration: '):]
+        break
 
     if not item:
         return
