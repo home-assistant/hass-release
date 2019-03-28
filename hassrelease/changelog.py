@@ -61,7 +61,6 @@ def _process_doc_label(label, parts, links, website_tags):
 
     if label.startswith('integration: '):
         item = label[len('integration: '):]
-        break
 
     if not item:
         return
