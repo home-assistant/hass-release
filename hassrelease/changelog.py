@@ -11,8 +11,8 @@ GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/
 LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
+    'new-integration': 'New Integrations',
     'new-platform': 'New Platforms',
-    'new-feature': 'New Features',
     'breaking change': 'Breaking Changes',
     'cherry-picked': 'Beta Fixes',
 }
@@ -48,10 +48,12 @@ def automation_link(platform, website_tags):
 
 
 LABEL_MAP = {
-    'discovery': None,
-    'recorder': None,
+    'discovery.': None,
+    'recorder.': None,
     'automation.': automation_link,
-    'emulated_hue.': None
+    'emulated_hue.': None,
+    'homeassistant.': None,
+    'cloud.': lambda pl, _wt: f"[{pl} docs]: https://www.nabucasa.com/config/"
 }
 
 
