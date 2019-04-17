@@ -10,17 +10,16 @@ def update_frontend_version(value):
     lines = []
 
     with open(os.path.join(
-            PATH, 'homeassistant/components/frontend/__init__.py'), 'rt')\
+            PATH, 'homeassistant/components/frontend/manifest.json'), 'rt')\
             as setup_file:
         for line in setup_file:
-            if line.startswith('REQUIREMENTS ='):
-                lines.append(f"REQUIREMENTS = ['home-assistant-frontend=="
-                             f"{value}']\n")
+            if 'home-assistant-frontend==' in line:
+                lines.append(f'    "home-assistant-frontend=={value}"\n')
             else:
                 lines.append(line)
 
     with open(os.path.join(
-            PATH, 'homeassistant/components/frontend/__init__.py'), 'wt')\
+            PATH, 'homeassistant/components/frontend/manifest.json'), 'wt')\
             as init_file:
         init_file.writelines(lines)
 
