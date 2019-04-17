@@ -92,8 +92,8 @@ def generate(release, prs, *, website_tags):
     website_tags: boolean if we should include tags for home-assistant.io
     """
     label_groups = OrderedDict()
+    label_groups['new-integration'] = []
     label_groups['new-platform'] = []
-    label_groups['new-feature'] = []
     label_groups['breaking change'] = []
     if release.version.version[-1] == 0:
         # Only add 'beta fix' for 0-release
