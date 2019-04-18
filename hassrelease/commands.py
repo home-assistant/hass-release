@@ -80,6 +80,8 @@ def pick(repo, milestone):
     for issue in sorted(
             repo.issues(milestone=gh_milestone.number, state='closed'),
             key=lambda issue: issue.number):
+        if not issue.pull_request_urls:
+            continue
         pull = repo.pull_request(issue.number)
 
         if not pull.is_merged():
