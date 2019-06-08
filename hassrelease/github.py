@@ -11,7 +11,7 @@ from .core import HassReleaseError
 
 
 def get_session():
-    """Fetch and/or load API authorization token for GITHUB."""
+    """Fetch and/or load API authorization token for GitHub."""
     if not os.path.isfile(TOKEN_FILE):
         raise HassReleaseError('Please write a GitHub token to .token')
 
