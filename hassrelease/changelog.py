@@ -20,7 +20,7 @@ LABEL_HEADERS = {
 
 WEBSITE_DIVIDER = """## {% linkable_title If you need help... %}
 
-...don't hesitate to use our very active [forums](https://community.home-assistant.io/) or join us for a little [chat](https://discord.gg/c5DvZ4e). The release notes have comments enabled but it's preferred if you use the former communication channels. Thanks.
+...don't hesitate to use our very active [forums](https://community.home-assistant.io/) or join us for a little [chat](https://discord.gg/c5DvZ4e).
 
 ## {% linkable_title Reporting Issues %}
 
