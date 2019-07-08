@@ -18,11 +18,11 @@ LABEL_HEADERS = {
 }
 # Handle special cases. None values will be ignored.
 
-WEBSITE_DIVIDER = """## {% linkable_title If you need help... %}
+WEBSITE_DIVIDER = """## If you need help...
 
 ...don't hesitate to use our very active [forums](https://community.home-assistant.io/) or join us for a little [chat](https://discord.gg/c5DvZ4e).
 
-## {% linkable_title Reporting Issues %}
+## Reporting Issues
 
 Experiencing issues introduced by this release? Please report them in our [issue tracker](https://github.com/home-assistant/home-assistant/issues). Make sure to fill in all fields of the issue template.
 
@@ -149,7 +149,7 @@ def generate(release, prs, *, website_tags):
     if release.is_patch_release:
         if website_tags:
             now = datetime.now()
-            outp.append(f'## {{% linkable_title Release {release.version} - {now.strftime("%B")} {now.day} %}}')
+            outp.append(f'## Release {release.version} - {now.strftime("%B")} {now.day}')
             outp.append('')
 
     else:
@@ -160,21 +160,13 @@ def generate(release, prs, *, website_tags):
             if not prs:
                 continue
 
-            if website_tags:
-                outp.append(f'## {{% linkable_title {LABEL_HEADERS[label]} %}}')
-                outp.append('')
-            else:
-                outp.append(f'## {LABEL_HEADERS[label]}')
-                outp.append('')
+            outp.append(f'## {LABEL_HEADERS[label]}')
+            outp.append('')
             outp.extend(prs)
             outp.append('')
 
-        if website_tags:
-            outp.append('## {% linkable_title All changes %}')
-            outp.append('')
-        else:
-            outp.append('## All changes')
-            outp.append('')
+        outp.append('## All changes')
+        outp.append('')
 
     outp.extend(changes)
     outp.append('')
