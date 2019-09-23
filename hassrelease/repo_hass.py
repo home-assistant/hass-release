@@ -1,27 +1,17 @@
 """Helper for the Home Assistant repository."""
-import os
+from pathlib import Path
+import json
 import subprocess
 
-PATH = os.path.join(os.path.dirname(__file__), '../../home-assistant/')
+PATH = Path(__file__).parent / '../../home-assistant/'
 
 
 def update_frontend_version(value):
     """Update frontend requirement."""
-    lines = []
-
-    with open(os.path.join(
-            PATH, 'homeassistant/components/frontend/manifest.json'), 'rt')\
-            as setup_file:
-        for line in setup_file:
-            if 'home-assistant-frontend==' in line:
-                lines.append(f'    "home-assistant-frontend=={value}"\n')
-            else:
-                lines.append(line)
-
-    with open(os.path.join(
-            PATH, 'homeassistant/components/frontend/manifest.json'), 'wt')\
-            as init_file:
-        init_file.writelines(lines)
+    manifest_path = PATH / 'homeassistant/components/frontend/manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    manifest['requirements'] = [f"home-assistant-frontend=={value}"]
+    manifest_path.write_text(json.dumps(manifest, indent=2))
 
 
 def gen_requirements_all():
