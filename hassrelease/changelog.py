@@ -7,8 +7,8 @@ PR_TEMPLATE = '([#{0}])'
 DOC_TEMPLATE = '([{0} docs])'
 LINK_DEF_USER = '[@{0}]: {1}'
 LINK_DEF_PR = '[#{0}]: {1}'
-GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/components/{0}/'
-LINK_DEF_DOC = '[{0} docs]: /components/{0}/'
+GITHUB_LINK_DEF_DOC = '[{0} docs]: https://www.home-assistant.io/integrations/{0}/'
+LINK_DEF_DOC = '[{0} docs]: /integrations/{0}/'
 IGNORE_LINE_LABELS = set(['reverted'])
 LABEL_HEADERS = {
     'new-integration': 'New Integrations',
