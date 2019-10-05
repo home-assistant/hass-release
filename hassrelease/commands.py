@@ -183,6 +183,10 @@ def credits(simul_requests, no_cache, quiet):
 
 @cli.command(help='Bump frontend in hass.')
 def bump_frontend():
+    if git.is_dirty(repo_hass.PATH):
+        print("Fatal error: the Home Assistant repo has unstaged commits")
+        return
+
     frontend = repo_polymer.get_version()
     repo_hass.update_frontend_version(frontend)
     repo_hass.gen_requirements_all()
