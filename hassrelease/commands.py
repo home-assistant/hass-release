@@ -89,13 +89,17 @@ def pick(repo, milestone):
             continue
 
         if any(label.name == LABEL_CHERRY_PICKED for label in issue.labels()):
-            print("Already cherry picked:", pull.title)
+            print(f"Already cherry picked: {pull.title} (#{pull.number})")
             continue
 
         to_pick.append((pull, issue))
 
+    print()
+
     for pull, issue in to_pick:
-        print("Cherry picking {}: {}".format(pull.title, pull.merge_commit_sha))
+        print(
+            f"Cherry picking {pull.title} (https://www.github.com/home-assistant/{remote_repository}/pull/{pull.number})"
+        )
         git.cherry_pick(pull.merge_commit_sha, local_repository)
         issue.add_labels(LABEL_CHERRY_PICKED)
 
