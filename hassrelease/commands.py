@@ -74,24 +74,30 @@ def pick(repo, milestone):
 
     git.fetch(local_repository)
 
+    existing = []
     to_pick = []
 
     for issue in sorted(
         repo.issues(milestone=gh_milestone.number, state="closed"),
         key=lambda issue: issue.number,
     ):
+
         if not issue.pull_request_urls:
             continue
+
         pull = repo.pull_request(issue.number)
 
         if not pull.is_merged():
             print("Not merged yet:", pull.title)
             continue
 
+        existing.append(pull)
+
         if any(label.name == LABEL_CHERRY_PICKED for label in issue.labels()):
             print(f"Already cherry picked: {pull.title} (#{pull.number})")
             continue
 
+        existing.remove(pull)
         to_pick.append((pull, issue))
 
     print()
@@ -104,7 +110,12 @@ def pick(repo, milestone):
         issue.add_labels(LABEL_CHERRY_PICKED)
 
     print()
-    print("Release notes")
+    print("Previously Picked")
+    print()
+    for pull in existing:
+        print(f"- {pull.title} (@{pull.user.login} - #{pull.number})")
+    print()
+    print("Just Picked")
     print()
     for pull, _ in to_pick:
         print(f"- {pull.title} (@{pull.user.login} - #{pull.number})")
