@@ -7,6 +7,7 @@ import click
 from . import changelog
 from . import credits as credits_module
 from . import git, github, model, repo_hass, repo_polymer
+from .core import HassReleaseError
 from .const import LABEL_CHERRY_PICKED
 from .util import copy_clipboard
 
@@ -81,8 +82,13 @@ def pick(repo, milestone):
         repo.issues(milestone=gh_milestone.number, state="closed"),
         key=lambda issue: issue.number,
     ):
-
         if not issue.pull_request_urls:
+            continue
+
+        existing.append(issue)
+
+        if any(label.name == LABEL_CHERRY_PICKED for label in issue.labels()):
+            print(f"Already cherry picked: {issue.title} (#{issue.number})")
             continue
 
         pull = repo.pull_request(issue.number)
@@ -91,34 +97,44 @@ def pick(repo, milestone):
             print("Not merged yet:", pull.title)
             continue
 
-        existing.append(pull)
-
-        if any(label.name == LABEL_CHERRY_PICKED for label in issue.labels()):
-            print(f"Already cherry picked: {pull.title} (#{pull.number})")
-            continue
 
         existing.remove(pull)
         to_pick.append((pull, issue))
 
     print()
 
-    for pull, issue in to_pick:
-        print(
-            f"Cherry picking {pull.title} (https://www.github.com/home-assistant/{remote_repository}/pull/{pull.number})"
-        )
-        git.cherry_pick(pull.merge_commit_sha, local_repository)
-        issue.add_labels(LABEL_CHERRY_PICKED)
+    failed_pick = None
+    caught_err = None
+
+    try:
+        for pull, issue in to_pick:
+            print(
+                f"Cherry picking {pull.title} (https://www.github.com/home-assistant/{remote_repository}/pull/{pull.number})"
+            )
+            git.cherry_pick(pull.merge_commit_sha, local_repository)
+            print()
+            issue.add_labels(LABEL_CHERRY_PICKED)
+    except HassReleaseError as err:
+        failed_pick = pull
+        caught_err = err
+
 
     print()
     print("Previously Picked")
     print()
-    for pull in existing:
-        print(f"- {pull.title} (@{pull.user.login} - #{pull.number})")
+    for issue in existing:
+        print(f"- {issue.title} (@{issue.user.login} - #{issue.number})")
     print()
     print("Just Picked")
     print()
     for pull, _ in to_pick:
+        if pull == failed_pick:
+            break
         print(f"- {pull.title} (@{pull.user.login} - #{pull.number})")
+
+    if caught_err:
+        print()
+        raise caught_err
 
 
 @cli.command(help="Mark merged PRs as cherry picked and closes milestone.")
