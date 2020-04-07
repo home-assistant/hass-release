@@ -98,7 +98,7 @@ def pick(repo, milestone):
             continue
 
 
-        existing.remove(pull)
+        existing.remove(issue)
         to_pick.append((pull, issue))
 
     print()
