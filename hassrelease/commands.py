@@ -128,7 +128,7 @@ def pick(repo, milestone):
     print("Just Picked")
     print()
     for pull, _ in to_pick:
-        if failed_pick == pull:
+        if failed_pick is not None and failed_pick == pull:
             break
         print(f"- {pull.title} (@{pull.user.login} - #{pull.number})")
 
