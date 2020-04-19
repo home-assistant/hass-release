@@ -1,7 +1,7 @@
 """Helper for the Home Assistant frontend repository."""
 import os
 
-PATH = os.path.join(os.path.dirname(__file__), '../../home-assistant-polymer/')
+PATH = os.path.join(os.path.dirname(__file__), '../../frontend/')
 
 
 def get_version():

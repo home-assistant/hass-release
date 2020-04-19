@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import subprocess
 
-PATH = Path(__file__).parent / '../../home-assistant/'
+PATH = Path(__file__).parent / '../../core/'
 
 
 def update_frontend_version(value):
@@ -16,7 +16,7 @@ def update_frontend_version(value):
 
 def gen_requirements_all():
     """Run gen_requirements_all.py."""
-    subprocess.run('script/gen_requirements_all.py', cwd=PATH)
+    subprocess.run('python3 -m script.gen_requirements_all', cwd=PATH, shell=True)
 
 
 def commit_all(message):

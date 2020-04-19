@@ -9,7 +9,7 @@ def get_hass_version(branch):
     process = subprocess.run(
         "git show {branch}:homeassistant/const.py".format(branch=branch),
         shell=True,
-        cwd="../home-assistant",
+        cwd="../core",
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
@@ -17,7 +17,7 @@ def get_hass_version(branch):
     if process.returncode != 0:
         text = (
             "Failed getting HASS version of branch - Does home-assistant repo exist at "
-            "../home-assistant? - Does branch {} exist?".format(branch)
+            "../core? - Does branch {} exist?".format(branch)
         )
         raise HassReleaseError(text)
 
@@ -31,7 +31,7 @@ def get_log(branch):
         "git log origin/master...{branch} "
         "--pretty=format:'- %s (%ae)' --reverse".format(branch=branch),
         shell=True,
-        cwd="../home-assistant",
+        cwd="../core",
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
@@ -39,7 +39,7 @@ def get_log(branch):
     if process.returncode != 0:
         text = (
             "Failed getting log - Does home-assistant repo exist at "
-            "../home-assistant? - Does branch {} exist?".format(branch)
+            "../core? - Does branch {} exist?".format(branch)
         )
         raise HassReleaseError(text)
 
@@ -60,18 +60,18 @@ def fetch(repo):
     if process.returncode != 0:
         text = (
             "Updating Home Assistant repo failed - Does home-assistant repo exist at "
-            "../home-assistant?"
+            "../core?"
         )
         raise HassReleaseError(text)
 
 
-def cherry_pick(sha, cwd="../home-assistant"):
+def cherry_pick(sha, cwd="../core"):
     process = subprocess.run("git cherry-pick {}".format(sha), shell=True, cwd=cwd)
 
     if process.returncode != 0:
         text = (
             "Cherry picking {} failed - Does home-assistant repo exist at "
-            "../home-assistant?".format(sha)
+            "../core?".format(sha)
         )
         raise HassReleaseError(text)
 
