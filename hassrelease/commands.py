@@ -55,9 +55,9 @@ def release_notes(branch, force_update, release):
 @click.option("--milestone", default=None)
 def pick(repo, milestone):
     if repo == "hass":
-        remote_repository = "home-assistant"
+        remote_repository = "core"
     elif repo in ("f", "frontend"):
-        remote_repository = "home-assistant-polymer"
+        remote_repository = "frontend"
     elif repo in ("d", "docs"):
         remote_repository = "home-assistant.io"
 
