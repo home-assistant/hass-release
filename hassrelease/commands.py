@@ -1,6 +1,5 @@
 import os
 import re
-import subprocess
 
 import click
 
@@ -97,7 +96,6 @@ def pick(repo, milestone):
             print("Not merged yet:", pull.title)
             continue
 
-
         existing.remove(issue)
         to_pick.append((pull, issue))
 
@@ -117,7 +115,6 @@ def pick(repo, milestone):
     except HassReleaseError as err:
         failed_pick = pull
         caught_err = err
-
 
     print()
     print("Previously Picked")
@@ -178,7 +175,7 @@ def milestone_list_commits(repository, title):
 @click.option("--branch", default="rc")
 @click.argument("release")
 def unmerged_docs(branch, release):
-    docs_pr_ptrn = re.compile("home-assistant/home-assistant.github.io#(\d+)")
+    docs_pr_ptrn = re.compile(r"home-assistant/home-assistant.github.io#(\d+)")
     gh_session = github.get_session()
     repo = gh_session.repository("home-assistant", "home-assistant")
     docs_repo = gh_session.repository("home-assistant", "home-assistant.github.io")

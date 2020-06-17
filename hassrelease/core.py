@@ -3,4 +3,5 @@
 
 class HassReleaseError(Exception):
     """Default exception"""
+
     pass
