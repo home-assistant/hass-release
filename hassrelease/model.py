@@ -5,7 +5,7 @@ from .git import get_log
 
 
 class LogLine:
-    PR_PATTERN = re.compile('\(#(\d+)\)')
+    PR_PATTERN = re.compile(r"\(#(\d+)\)")
 
     def __init__(self, line):
         # Strip off the '-' at the start
@@ -22,7 +22,7 @@ class LogLine:
         else:
             self.pr = None
 
-        self.message = ' '.join(parts)
+        self.message = " ".join(parts)
 
 
 class PRCache:
@@ -43,13 +43,13 @@ class Release:
         self._log_lines = None
 
         if self.version.version[-1] == 0 and not self.version.prerelease:
-            vstring = '-'.join(map(str, self.version.version[:2]))
+            vstring = "-".join(map(str, self.version.version[:2]))
         else:
-            vstring = '-'.join(map(str, self.version.version))
-        self.identifier = 'release-' + vstring
+            vstring = "-".join(map(str, self.version.version))
+        self.identifier = "release-" + vstring
 
         if self.version.prerelease:
-            pstring = ''.join(map(str, self.version.prerelease))
+            pstring = "".join(map(str, self.version.prerelease))
             self.identifier = self.identifier + pstring
 
     @property
