@@ -25,6 +25,10 @@ def release_notes(branch, force_update, release):
         release = git.get_hass_version(branch)
         print("Auto detected version", release)
 
+    print(
+        f"PR link: https://github.com/home-assistant/home-assistant/compare/master...{branch}?expand=1&title={release}"
+    )
+
     rel = model.Release(release, branch=branch)
     file_website = "data/{}.md".format(rel.identifier)
     file_github = "data/{}-github.md".format(rel.identifier)
