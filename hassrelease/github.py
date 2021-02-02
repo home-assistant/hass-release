@@ -12,11 +12,17 @@ from .core import HassReleaseError
 
 def get_session():
     """Fetch and/or load API authorization token for GitHub."""
-    if not os.path.isfile(TOKEN_FILE):
-        raise HassReleaseError("Please write a GitHub token to .token")
+    token = None
+    if os.path.isfile(TOKEN_FILE):
+        with open(TOKEN_FILE) as fd:
+            token = fd.readline().strip()
+    elif "GITHUB_TOKEN" in os.environ:
+        token = os.environ["GITHUB_TOKEN"]
 
-    with open(TOKEN_FILE) as fd:
-        token = fd.readline().strip()
+    if token is None:
+        raise HassReleaseError(
+            "Please write a GitHub token to .token or set GITHUB_TOKEN env var"
+        )
 
     gh = GitHub(token=token)
     try:  # Test connection before starting
