@@ -31,8 +31,9 @@ def release_notes(branch, force_update, release):
     )
 
     rel = model.Release(release, branch=branch)
-    file_website = pathlib.Path("data/{}.md".format(rel.identifier)).absolute()
-    file_github = pathlib.Path("data/{}-github.md".format(rel.identifier)).absolute()
+    repo_root = pathlib.Path(__file__).parent.parent
+    file_website = (repo_root / "data/{}.md".format(rel.identifier)).absolute()
+    file_github = (repo_root / "data/{}-github.md".format(rel.identifier)).absolute()
 
     if force_update or not file_website.is_file():
         gh_session = github.get_session()
