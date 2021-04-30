@@ -129,6 +129,7 @@ def remove_branch(repo, branch):
         .replace("\n", "")
     )
 
+    assert branch != default
     process = subprocess.run(
         f"git checkout {default_branch} && git branch -d {branch}", shell=True, cwd=repo
     )
