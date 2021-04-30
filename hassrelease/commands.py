@@ -265,6 +265,9 @@ def bump_frontend(feature_branch, create_branch):
     repo_core.commit_all(f"Update frontend to {frontend}")
 
     if create_branch:
+        print(
+            f"PR link: https://github.com/home-assistant/home-assistant/compare/dev...{branch_name}?expand=1&title=Update%20frontend%20to%20{frontend}&body=https://github.com/home-assistant/frontend/releases/tag/{frontend}"
+        )
         git.publish_branch(repo_core.PATH, branch_name)
         git.remove_branch(repo_core.PATH, branch_name)
 
