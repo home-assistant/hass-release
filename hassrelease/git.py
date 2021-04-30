@@ -86,7 +86,7 @@ def is_dirty(repo):
 
 
 def is_main(repo):
-    """Test if current repo is the main repo."""
+    """Test if current branch is the main branch."""
     return (
         subprocess.run(
             "git branch --show-current", capture_output=True, shell=True, cwd=repo
