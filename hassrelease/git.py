@@ -83,3 +83,56 @@ def is_dirty(repo):
         ).stdout
         != b""
     )
+
+
+def is_main(repo):
+    """Test if current branch is the main branch."""
+    return (
+        subprocess.run(
+            "git branch --show-current", capture_output=True, shell=True, cwd=repo
+        ).stdout
+        == subprocess.run(
+            "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'",
+            capture_output=True,
+            shell=True,
+            cwd=repo,
+        ).stdout
+    )
+
+
+def create_branch(repo, branch):
+    """Create a new branch on a repo."""
+    process = subprocess.run(f"git checkout -b {branch}", shell=True, cwd=repo)
+
+    if process.returncode != 0:
+        raise HassReleaseError("Creating branch failed")
+
+
+def publish_branch(repo, branch):
+    """Publish a branch."""
+    process = subprocess.run(f"git push -u origin {branch}", shell=True, cwd=repo)
+
+    if process.returncode != 0:
+        raise HassReleaseError("Publishing branch failed")
+
+
+def remove_branch(repo, branch):
+    """Remove a local branch."""
+    default_branch = (
+        subprocess.run(
+            "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'",
+            capture_output=True,
+            shell=True,
+            cwd=repo,
+        )
+        .stdout.decode("UTF-8")
+        .replace("\n", "")
+    )
+
+    assert branch != default_branch
+    process = subprocess.run(
+        f"git checkout {default_branch} && git branch -d {branch}", shell=True, cwd=repo
+    )
+
+    if process.returncode != 0:
+        raise HassReleaseError("Removing local branch failed")

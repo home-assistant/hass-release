@@ -6,7 +6,7 @@ import click
 
 from . import changelog
 from . import credits as credits_module
-from . import git, github, model, repo_hass, repo_polymer
+from . import git, github, model, repo_core, repo_frontend
 from .core import HassReleaseError
 from .const import LABEL_CHERRY_PICKED
 from .util import open_vscode
@@ -230,15 +230,46 @@ def credits(simul_requests, no_cache, quiet):
 
 
 @cli.command(help="Bump frontend in hass.")
-def bump_frontend():
-    if git.is_dirty(repo_hass.PATH):
-        print("Fatal error: the Home Assistant repo has unstaged commits")
+@click.option(
+    "-f",
+    "--feature-branch",
+    is_flag=True,
+    help="Allows to use the version of a feature branch of the frontend repo instead of the main branch",
+)
+@click.option(
+    "-b",
+    "--create-branch",
+    is_flag=True,
+    help="Create a new branch on the core repo, and push it to remote",
+)
+def bump_frontend(feature_branch, create_branch):
+    if git.is_dirty(repo_core.PATH):
+        print("Fatal error: the Home Assistant core repo has unstaged commits")
         return
 
-    frontend = repo_polymer.get_version()
-    repo_hass.update_frontend_version(frontend)
-    repo_hass.gen_requirements_all()
-    repo_hass.commit_all(f"Updated frontend to {frontend}")
+    if not feature_branch and not git.is_main(repo_frontend.PATH):
+        print(
+            "Fatal error: the Frontend repo is not on the main branch, use `--feature-branch` to use the version of another branch"
+        )
+        return
+
+    frontend = repo_frontend.get_version()
+
+    branch_name = f"bump-frontend-{frontend}"
+
+    if create_branch:
+        git.create_branch(repo_core.PATH, branch_name)
+
+    repo_core.update_frontend_version(frontend)
+    repo_core.gen_requirements_all()
+    repo_core.commit_all(f"Update frontend to {frontend}")
+
+    if create_branch:
+        print(
+            f"PR link: https://github.com/home-assistant/home-assistant/compare/dev...{branch_name}?expand=1&title=Update%20frontend%20to%20{frontend}&body=https://github.com/home-assistant/frontend/releases/tag/{frontend}"
+        )
+        git.publish_branch(repo_core.PATH, branch_name)
+        git.remove_branch(repo_core.PATH, branch_name)
 
 
 @cli.command(help="Create new release post.")
