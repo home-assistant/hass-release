@@ -13,7 +13,7 @@ IGNORE_LINE_LABELS = set(["reverted"])
 LABEL_HEADERS = {
     "new-integration": "New Integrations",
     "new-platform": "New Platforms",
-    "breaking change": "Breaking Changes",
+    "breaking-change": "Breaking Changes",
     "cherry-picked": "Beta Fixes",
 }
 # Handle special cases. None values will be ignored.
@@ -94,7 +94,7 @@ def generate(release, prs, *, website_tags):
     label_groups = OrderedDict()
     label_groups["new-integration"] = []
     label_groups["new-platform"] = []
-    label_groups["breaking change"] = []
+    label_groups["breaking-change"] = []
     if release.version.version[-1] == 0:
         # Only add 'beta fix' for 0-release
         label_groups["cherry-picked"] = []
@@ -157,7 +157,7 @@ def generate(release, prs, *, website_tags):
 
     else:
         for label, prs in label_groups.items():
-            if label == "breaking change" and website_tags:
+            if label == "breaking-change" and website_tags:
                 outp.append(WEBSITE_DIVIDER)
 
             if not prs:
