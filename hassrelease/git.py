@@ -1,3 +1,4 @@
+import configparser
 import subprocess
 
 from .core import HassReleaseError
@@ -6,7 +7,7 @@ from .core import HassReleaseError
 def get_hass_version(branch):
     """Get the HA version of a branch."""
     process = subprocess.run(
-        "git show {branch}:homeassistant/const.py".format(branch=branch),
+        "git show {branch}:setup.cfg".format(branch=branch),
         shell=True,
         cwd="../core",
         stdout=subprocess.PIPE,
@@ -20,9 +21,9 @@ def get_hass_version(branch):
         )
         raise HassReleaseError(text)
 
-    locals = {}
-    exec(process.stdout, {}, locals)
-    return locals["__version__"]
+    config = configparser.ConfigParser()
+    config.read_string(process.stdout.decode())
+    return config["metadata"]["version"]
 
 
 def get_log(branch):
