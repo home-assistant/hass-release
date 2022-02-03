@@ -23,7 +23,7 @@ def get_hass_version(branch):
 
     config = configparser.ConfigParser()
     config.read_string(process.stdout.decode())
-    return config['metadata']['version']
+    return config["metadata"]["version"]
 
 
 def get_log(branch):
