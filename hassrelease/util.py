@@ -9,3 +9,7 @@ def copy_clipboard(text):
 def open_vscode(*paths):
     """Open a file in VS Code."""
     subprocess.run(["code", *paths])
+
+def prettier(path):
+    """Run prettier on a file."""
+    subprocess.run(["prettier", "--write", path])
