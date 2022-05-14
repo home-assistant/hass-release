@@ -146,7 +146,8 @@ class ContributorsPageTask(RequestTask):
                     "contributions"
                 ]
             # contr['type'] == 'Anonymous'
-            else:
+            # Anonymous contributions might not have an email
+            elif "email" in contr:
                 login = login_by_email.get(contr["email"])
                 if login is None:
                     # We could just get the login right from the email
