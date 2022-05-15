@@ -14,3 +14,4 @@ def open_vscode(*paths):
 def prettier(path):
     """Run prettier on a file."""
     subprocess.run(["prettier", "--write", path])
+ 
