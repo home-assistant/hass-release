@@ -3,6 +3,8 @@ from pathlib import Path
 import json
 import subprocess
 
+from hassrelease.util import prettier
+
 PATH = Path(__file__).parent / "../../core/"
 
 
@@ -11,7 +13,8 @@ def update_frontend_version(value):
     manifest_path = PATH / "homeassistant/components/frontend/manifest.json"
     manifest = json.loads(manifest_path.read_text())
     manifest["requirements"] = [f"home-assistant-frontend=={value}"]
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest))
+    prettier(f"{PATH}/homeassistant/components/frontend/manifest.json")
 
 
 def gen_requirements_all():
