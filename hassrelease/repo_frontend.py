@@ -17,4 +17,4 @@ def get_version():
     if found is None:
         raise ValueError("Unable to detect version")
 
-    return found.split("=")[-1].replace('"', '').strip()
+    return found.split("=")[-1].replace('"', "").strip()
