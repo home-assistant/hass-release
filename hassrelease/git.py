@@ -1,4 +1,4 @@
-import configparser
+import toml
 import subprocess
 
 from .core import HassReleaseError
@@ -7,7 +7,7 @@ from .core import HassReleaseError
 def get_hass_version(branch):
     """Get the HA version of a branch."""
     process = subprocess.run(
-        "git show {branch}:setup.cfg".format(branch=branch),
+        "git show {branch}:pyproject.toml".format(branch=branch),
         shell=True,
         cwd="../core",
         stdout=subprocess.PIPE,
@@ -21,9 +21,8 @@ def get_hass_version(branch):
         )
         raise HassReleaseError(text)
 
-    config = configparser.ConfigParser()
-    config.read_string(process.stdout.decode())
-    return config["metadata"]["version"]
+    config = toml.loads(process.stdout.decode())
+    return config["project"]["version"]
 
 
 def get_log(branch):
