@@ -362,7 +362,7 @@ def generate_credits(num_simul_requests, no_cache, quiet):
                 num_contribs, "commits" if num_contribs > 1 else "commit", repo_name
             )
             user_total_contribs += num_contribs
-        count_string = "{} total commits to the Home Assistant orga:\n{}".format(
+        count_string = "{} total commits to the Home Assistant org:\n{}".format(
             user_total_contribs, count_string
         )
         # TODO if the login_by_email file contains some users that
