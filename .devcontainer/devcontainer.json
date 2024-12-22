@@ -1,0 +1,29 @@
+{
+  "name": "hass-release",
+  "context": "..",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.13",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.pylint",
+        "ms-python.vscode-pylance"
+      ],
+      "editor.formatOnPaste": false,
+      "editor.formatOnSave": true,
+      "editor.formatOnType": true,
+      "files.trimTrailingWhitespace": true,
+      "terminal.integrated.profiles.linux": {
+        "zsh": {
+          "path": "/usr/bin/zsh"
+        }
+      },
+      "terminal.integrated.defaultProfile.linux": "zsh",
+      "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff"
+      }
+    }
+  },
+  "postCreateCommand": "script/setup && pip install -e .",
+  "remoteUser": "vscode"
+}

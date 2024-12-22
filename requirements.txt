@@ -1,5 +1,6 @@
 click
-github3.py==1.2.0
+github3.py>=4.0.1
+packaging
 pystache
 requests
 toml
