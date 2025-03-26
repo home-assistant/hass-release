@@ -1,6 +1,6 @@
 import os
 import time
-from distutils.version import StrictVersion
+from packaging.version import Version
 
 import requests
 from github3 import GitHub
@@ -14,7 +14,7 @@ def get_session():
     """Fetch and/or load API authorization token for GitHub."""
     token = None
     if os.path.isfile(TOKEN_FILE):
-        with open(TOKEN_FILE) as fd:
+        with open(TOKEN_FILE, encoding="utf-8") as fd:
             token = fd.readline().strip()
     elif "GITHUB_TOKEN" in os.environ:
         token = os.environ["GITHUB_TOKEN"]
@@ -52,7 +52,7 @@ def get_latest_version_milestone(repo):
 
     for ms in repo.milestones(state="open"):
         try:
-            milestones.append((StrictVersion(ms.title), ms))
+            milestones.append((Version(ms.title), ms))
         except ValueError:
             print("Found milestone with invalid version", ms.title)
 

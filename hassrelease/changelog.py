@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from distutils.version import StrictVersion
+from packaging.version import Version
 
 INFO_TEMPLATE = "([@{0}] - [#{1}])"
 PR_TEMPLATE = "([#{0}])"
@@ -40,11 +40,11 @@ def automation_link(platform, website_tags):
         val = platform[len("automation.") :]
 
     if website_tags:
-        format = "[{} docs]: /docs/automation/trigger/#{}-trigger"
+        template = "[{} docs]: /docs/automation/trigger/#{}-trigger"
     else:
-        format = "[{} docs]: https://www.home-assistant.io/docs/automation/trigger/#{}-trigger"
+        template = "[{} docs]: https://www.home-assistant.io/docs/automation/trigger/#{}-trigger"
 
-    return format.format(platform, val)
+    return template.format(platform, val)
 
 
 LABEL_MAP = {
@@ -95,7 +95,7 @@ def generate(release, prs, *, website_tags):
     label_groups["new-integration"] = []
     label_groups["new-platform"] = []
     label_groups["breaking-change"] = []
-    if release.version.version[-1] == 0:
+    if release.version.release[-1] == 0:
         # Only add 'beta fix' for 0-release
         label_groups["cherry-picked"] = []
 
@@ -112,7 +112,7 @@ def generate(release, prs, *, website_tags):
 
         if (
             pr.milestone is not None
-            and StrictVersion(pr.milestone.title).version != release.version.version
+            and Version(pr.milestone.title).release != release.version.release
         ):  # Ignore beta version tag
             continue
 
@@ -135,7 +135,7 @@ def generate(release, prs, *, website_tags):
                 if label == "cherry-picked":
                     parts.append("(beta fix)")
                 else:
-                    parts.append("({})".format(label))
+                    parts.append(f"({label})")
 
         msg = " ".join(parts)
         changes.append(msg)
