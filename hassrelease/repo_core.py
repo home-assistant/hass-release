@@ -1,4 +1,5 @@
 """Helper for the Home Assistant repository."""
+
 from pathlib import Path
 import json
 import subprocess

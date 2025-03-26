@@ -1,4 +1,5 @@
 """Create the credits page for home-assistant.io."""
+
 import re
 import sys
 import threading
@@ -285,8 +286,8 @@ def generate_credits(num_simul_requests, no_cache, quiet):
             for lin in inp:
                 if "," not in lin:
                     lin = lin.strip() + ","
-                if lin.count(',') > 1:
-                    lin = ''.join(lin.rsplit(',', 1))
+                if lin.count(",") > 1:
+                    lin = "".join(lin.rsplit(",", 1))
                 key, value = [val.strip() for val in lin.split(",")]
                 data[key] = value
         return data

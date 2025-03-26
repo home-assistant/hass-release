@@ -1,4 +1,5 @@
 """Main part of the Home Assistant Release helper."""
+
 import click
 
 from .commands import cli
