@@ -52,7 +52,7 @@ def get_latest_version_milestone(repo):
 
     for ms in repo.milestones(state="open"):
         try:
-            milestones.append((StrictVersion(ms.title), ms))
+            milestones.append((Version(ms.title), ms))
         except ValueError:
             print("Found milestone with invalid version", ms.title)
 

@@ -38,7 +38,7 @@ class PRCache:
 
 class Release:
     def __init__(self, version, *, branch):
-        self.version = StrictVersion(version)
+        self.version = Version(version)
         self.branch = branch
         self._log_lines = None
 

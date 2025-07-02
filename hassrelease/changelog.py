@@ -112,7 +112,7 @@ def generate(release, prs, *, website_tags):
 
         if (
             pr.milestone is not None
-            and StrictVersion(pr.milestone.title).version != release.version.version
+            and Version(pr.milestone.title).version != release.version.version
         ):  # Ignore beta version tag
             continue
 
@@ -151,7 +151,7 @@ def generate(release, prs, *, website_tags):
         if website_tags:
             now = datetime.now()
             outp.append(
-                f'## Release {release.version} - {now.strftime("%B")} {now.day}'
+                f"## Release {release.version} - {now.strftime('%B')} {now.day}"
             )
             outp.append("")
 
