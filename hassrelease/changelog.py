@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from distutils.version import StrictVersion
+from packaging.version import StrictVersion
 
 INFO_TEMPLATE = "([@{0}] - [#{1}])"
 PR_TEMPLATE = "([#{0}])"
