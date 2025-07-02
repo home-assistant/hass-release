@@ -1,5 +1,5 @@
 import re
-from distutils.version import StrictVersion
+from packaging.version import StrictVersion
 
 from .git import get_log
 
