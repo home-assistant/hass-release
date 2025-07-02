@@ -95,7 +95,7 @@ def generate(release, prs, *, website_tags):
     label_groups["new-integration"] = []
     label_groups["new-platform"] = []
     label_groups["breaking-change"] = []
-    if release.version.version[-1] == 0:
+    if release.version.release[-1] == 0:
         # Only add 'beta fix' for 0-release
         label_groups["cherry-picked"] = []
 
@@ -112,7 +112,7 @@ def generate(release, prs, *, website_tags):
 
         if (
             pr.milestone is not None
-            and Version(pr.milestone.title).version != release.version.version
+            and Version(pr.milestone.title).release != release.version.release
         ):  # Ignore beta version tag
             continue
 
