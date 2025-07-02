@@ -1,5 +1,5 @@
 import re
-from distutils.version import StrictVersion
+from packaging.version import Version
 
 from .git import get_log
 
@@ -38,18 +38,18 @@ class PRCache:
 
 class Release:
     def __init__(self, version, *, branch):
-        self.version = StrictVersion(version)
+        self.version = Version(version)
         self.branch = branch
         self._log_lines = None
 
-        if self.version.version[-1] == 0 and not self.version.prerelease:
-            vstring = "-".join(map(str, self.version.version[:2]))
+        if self.version.release[-1] == 0 and not self.version.is_prerelease:
+            vstring = "-".join(map(str, self.version.release[:2]))
         else:
-            vstring = "-".join(map(str, self.version.version))
+            vstring = "-".join(map(str, self.version.release))
         self.identifier = "release-" + vstring
 
-        if self.version.prerelease:
-            pstring = "".join(map(str, self.version.prerelease))
+        if self.version.is_prerelease:
+            pstring = "".join(map(str, self.version.pre))
             self.identifier = self.identifier + pstring
 
     @property
@@ -58,7 +58,7 @@ class Release:
 
         Patch release is when X in 0.0.X is not 0.
         """
-        return self.version.version[-1] != 0
+        return self.version.release[-1] != 0
 
     def log_lines(self):
         if self._log_lines is None:
