@@ -1,5 +1,5 @@
 import re
-from packaging.version import StrictVersion
+from packaging.version import Version
 
 from .git import get_log
 

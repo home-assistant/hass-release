@@ -1,6 +1,6 @@
 import os
 import time
-from packaging.version import StrictVersion
+from packaging.version import Version
 
 import requests
 from github3 import GitHub
