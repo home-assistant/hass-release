@@ -63,7 +63,7 @@ class Release:
     @property
     def blog_slug(self):
         """Return blog slug without zero-padding.
-        
+
         Example: For version 2026.4.0, returns 'release-20264'
         """
         if self.version.release[-1] == 0 and not self.version.is_prerelease:
@@ -80,12 +80,18 @@ class Release:
 
     @property
     def blog_month(self):
-        """Return the month for blog URL without zero-padding (second part of version)."""
+        """Return the month for blog URL without zero-padding.
+
+        Second part of version.
+        """
         return self.version.release[1]
 
     @property
     def blog_day(self):
-        """Return the day for blog URL without zero-padding (third part of version for patches, 1 for major releases)."""
+        """Return the day for blog URL without zero-padding.
+
+        Third part of version for patches, 1 for major releases.
+        """
         if self.is_patch_release:
             return self.version.release[2]
         return 1
