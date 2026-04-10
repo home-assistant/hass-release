@@ -60,6 +60,36 @@ class Release:
         """
         return self.version.release[-1] != 0
 
+    @property
+    def blog_slug(self):
+        """Return blog slug without zero-padding.
+        
+        Example: For version 2026.4.0, returns 'release-20264'
+        """
+        if self.version.release[-1] == 0 and not self.version.is_prerelease:
+            # Major release: join year and month without separator
+            return f"release-{self.version.release[0]}{self.version.release[1]}"
+        else:
+            # Patch release: join all parts without separator
+            return "release-" + "".join(map(str, self.version.release))
+
+    @property
+    def blog_year(self):
+        """Return the year for blog URL (first part of version)."""
+        return self.version.release[0]
+
+    @property
+    def blog_month(self):
+        """Return the month for blog URL without zero-padding (second part of version)."""
+        return self.version.release[1]
+
+    @property
+    def blog_day(self):
+        """Return the day for blog URL without zero-padding (third part of version for patches, 1 for major releases)."""
+        if self.is_patch_release:
+            return self.version.release[2]
+        return 1
+
     def log_lines(self):
         if self._log_lines is None:
             self._log_lines = [LogLine(line) for line in get_log(self.branch)]
